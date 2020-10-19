@@ -1,0 +1,11 @@
+## Interface: 90001
+## Title: Show My Stats
+## Notes: Simple Addon that enables to show chosen character stats on the screen
+## SavedVariables: ShowMyStatsDB
+## Author: Philipp Lars Harnisch
+## Version: 0.1
+
+embeds.xml
+
+ShowMyStatsFrame.xml
+Core.lua
