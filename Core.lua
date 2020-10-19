@@ -132,6 +132,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
     end
 end
 
+-- HOW TO HANDLE USER PROFILES AND WHAT KIND OF CONFIG TO REFRESH?
 function ShowMyStatsAddon:RefreshConfig()
     self:Print("refresh config")
 end
@@ -147,19 +148,110 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
--- EVENT HANDLING EXAMPLE
-function ShowMyStatsAddon:EnteringHandler()
-    self:Print("HElloooo00000!")
+function getAllInfos()
+    return getMasteryInfo() .. "\n" .. getSpellCritInfo() .. "\n" .. getHasteInfo() .. "\n" .. getVersatilityInfo() .. "\n" .. getAbsorbInfo()
 end
-ShowMyStatsAddon:RegisterEvent("PLAYER_ENTERING_WORLD", "EnteringHandler") -- Registering must be after declaring handler func
--- EXAMPLE END
+
+function getMasteryInfo()
+    masteryeffect, coefficient = GetMasteryEffect() -- mastery*coefficient=masteryeffect
+    mastery = GetMastery() -- pure value 
+    return "Mastery: " .. string.format("%.2f", masteryeffect)
+end
+
+function getSpellCritInfo()
+    shadowSpellCrit = GetSpellCritChance(6)
+    return "SpellCrit: " .. string.format("%.2f", shadowSpellCrit)
+end
+
+function getHasteInfo()
+    spellHastePercent  = UnitSpellHaste("player")
+    return "Haste: " .. string.format("%.2f", spellHastePercent)
+end
+
+function getVersatilityInfo()
+    ratio = 0.082
+    versaStat = GetCombatRating(29)
+    versa = 0
+    for i=1, versaStat, 1 do
+        if versa < 25 then
+            versa = versa + ratio
+        elseif versa < 34 then
+            versa = versa + ratio * 0.9
+        elseif versa < 42 then
+            versa = versa + ratio * 0.8
+        elseif versa < 49 then
+            versa = versa + ratio * 0.7
+        elseif versa < 106 then
+            versa = versa + ratio * 0.6
+        end
+    end
+    return "Versatility: " .. string.format("%.2f", versa)
+end
+
+function getAbsorbInfo()
+    local absorb = UnitGetTotalAbsorbs("player")
+    return "Absorb: " .. absorb
+end
+
+function ShowMyStatsAddon:ShowStatFrame()
+    if self.f == nil then
+        self.f = CreateFrame("Frame",nil,UIParent);
+        self.f:SetFrameStrata("BACKGROUND")
+        self.f:SetWidth(128) -- Set these to whatever height/width is needed 
+        self.f:SetHeight(64) -- for your Texture
+        self.text = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        self.text:SetPoint("CENTER", 0, 0)
+        self.text:Show()
+        self.f:SetPoint("CENTER",-200,300)
+        self.f:Show()
+    end
+    self.text:SetText(getAllInfos())
+end
+ShowMyStatsAddon:ShowStatFrame()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function ShowMyStatsAddon:UpdateHandler()
+    ShowMyStatsAddon:ShowStatFrame()
+end
+ShowMyStatsAddon:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateHandler")
+ShowMyStatsAddon:RegisterEvent("UNIT_AURA", "UpdateHandler")
+ShowMyStatsAddon:RegisterEvent("UPDATE_SHAPESHIFT_FORM", "UpdateHandler")
+ShowMyStatsAddon:RegisterEvent("UNIT_INVENTORY_CHANGED", "UpdateHandler")
+ShowMyStatsAddon:RegisterEvent("UNIT_LEVEL", "UpdateHandler")
+ShowMyStatsAddon:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateHandler")
+ShowMyStatsAddon:RegisterEvent("PLAYER_REGEN_DISABLED", "UpdateHandler")
+ShowMyStatsAddon:RegisterEvent("PLAYER_TALENT_UPDATE", "UpdateHandler")
