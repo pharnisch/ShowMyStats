@@ -12,6 +12,12 @@ local defaults = {
             y = -250,
             anchor = 'TOP',
         },
+        haste = {
+            enabled = true,
+        },
+        crit = {
+            enabled = true,
+        },
         mastery = {
             enabled = true,
         },
@@ -19,7 +25,7 @@ local defaults = {
             enabled = true,
         },
         ['**'] = {
-            enabled = true,
+            enabled = false,
             color = {
                 r = 255,
                 g = 255,
@@ -35,10 +41,12 @@ local stats = {
     "stamina",
     "intellect",
     "mastery",
-    "spellHaste",
-    "spellCrit",
+    "haste",
+    "crit",
     "versatility",
     "absorb",
+    "armor",
+    "speed"
 }
 local options = {
     name = "ShowMyStats",
@@ -231,20 +239,6 @@ end
 
 
 
-
-function ShowMyStatsAddon:GetAllInfos()
-    return 
-    ShowMyStatsAddon:GetMainStatInfo("strength") .. "\n" .. 
-    ShowMyStatsAddon:GetMainStatInfo("agility") .. "\n" .. 
-    ShowMyStatsAddon:GetMainStatInfo("stamina") .. "\n" .. 
-    ShowMyStatsAddon:GetMainStatInfo("intellect") .. "\n" .. 
-    ShowMyStatsAddon:GetMasteryInfo() .. "\n" .. 
-    ShowMyStatsAddon:GetSpellCritInfo() .. "\n" .. 
-    ShowMyStatsAddon:GetSpellHasteInfo() .. "\n" .. 
-    ShowMyStatsAddon:GetVersatilityInfo() .. "\n" .. 
-    ShowMyStatsAddon:GetAbsorbInfo()
-end
-
 local mainStatIndex = {
     strength = 1,
     agility = 2,
@@ -252,43 +246,28 @@ local mainStatIndex = {
     intellect = 4,
 }
 function ShowMyStatsAddon:GetMainStatInfo(mainStatName)
-    if self.db.profile[mainStatName].enabled == false then
-        return ""
-    end
     base, stat, posBuff, negBuff = UnitStat("player", mainStatIndex[mainStatName])
     return mainStatName .. ": " .. stat
 end
 
 function ShowMyStatsAddon:GetMasteryInfo()
-    if self.db.profile.mastery.enabled == false then
-        return ""
-    end
     masteryeffect, coefficient = GetMasteryEffect() -- mastery*coefficient=masteryeffect
     mastery = GetMastery() -- pure value 
-    return "Mastery: " .. string.format("%.2f", masteryeffect)
+    return "Mastery: " .. string.format("%.0f%%", masteryeffect)
 end
 
-function ShowMyStatsAddon:GetSpellCritInfo()
-    if self.db.profile.spellCrit.enabled == false then
-        return ""
-    end
+function ShowMyStatsAddon:GetCritInfo()
     shadowSpellCrit = GetSpellCritChance(6)
-    return "SpellCrit: " .. string.format("%.2f", shadowSpellCrit)
+    return "SpellCrit: " .. string.format("%.0f%%", shadowSpellCrit)
 end
 
-function ShowMyStatsAddon:GetSpellHasteInfo()
-    if self.db.profile.spellHaste.enabled == false then
-        return ""
-    end
+function ShowMyStatsAddon:GetHasteInfo()
     spellHastePercent  = UnitSpellHaste("player")
-    return "Spell Haste: " .. string.format("%.2f", spellHastePercent)
+    return "Spell Haste: " .. string.format("%.0f%%", spellHastePercent)
 end
 
 function ShowMyStatsAddon:GetVersatilityInfo()
-    if self.db.profile.versatility.enabled == false then
-        return ""
-    end
-    ratio = 0.082
+    ratio = 0.082 -- only for lv50!!! TODO: calculate dynamically
     versaStat = GetCombatRating(29)
     versa = 0
     for i=1, versaStat, 1 do
@@ -304,15 +283,22 @@ function ShowMyStatsAddon:GetVersatilityInfo()
             versa = versa + ratio * 0.6
         end
     end
-    return "Versatility: " .. string.format("%.2f", versa)
+    return "Versatility: " .. string.format("%.0f%%", versa)
 end
 
 function ShowMyStatsAddon:GetAbsorbInfo()
-    if self.db.profile.absorb.enabled == false then
-        return ""
-    end
     local absorb = UnitGetTotalAbsorbs("player")
     return "Absorb: " .. absorb
+end
+
+function ShowMyStatsAddon:GetSpeedInfo()
+    currentSpeed, runningSpeed = GetUnitSpeed("player")
+    return string.format("Speed: %d%%", (runningSpeed / 7) * 100)
+end
+
+function ShowMyStatsAddon:GetArmorInfo()
+    base, effectiveArmor, armor, posBuff, negBuff = UnitArmor("player");
+    return string.format("Armor: %d", effectiveArmor)
 end
 
 function ShowMyStatsAddon:GetStatInfo(statName)
@@ -326,16 +312,22 @@ function ShowMyStatsAddon:GetStatInfo(statName)
         return self:GetMainStatInfo("intellect")
     elseif statName == "mastery" then
         return self:GetMasteryInfo()
-    elseif statName == "spellHaste" then
-        return self:GetSpellHasteInfo()
-    elseif statName == "spellCrit" then
-        return self:GetSpellCritInfo()
+    elseif statName == "haste" then
+        return self:GetHasteInfo()
+    elseif statName == "crit" then
+        return self:GetCritInfo()
     elseif statName == "versatility" then
         return self:GetVersatilityInfo()
     elseif statName == "absorb" then
         return self:GetAbsorbInfo()
+    elseif statName == "speed" then
+        return self:GetSpeedInfo()
+    elseif statName == "armor" then
+        return self:GetArmorInfo()
     end
 end
+
+
 
 -- GetBlockChance()
 -- GetCritChance() 
@@ -350,6 +342,35 @@ end
 -- UnitArmor("unit")
 -- UnitDamage("unit")
 -- UnitRangeDamage/RangePower/Range...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 function ShowMyStatsAddon:UpdateHandler()
@@ -370,17 +391,11 @@ function ShowMyStatsAddon:ConstructStatFrame()
     --self.f:SetScript("OnDragStop", self.f.StopMovingOrSizing)
     --------------------------------------------self.f:SetScript("OnReceiveDrag", self.Test)
     self.f:SetFrameStrata("BACKGROUND")
-    self.f:SetWidth(150) -- Set these to whatever height/width is needed 
-    self.f:SetHeight(200) -- for your Texture
-    --self.text = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    --self.text:SetTextColor(0.5, 1, 0.2, 0.5)
-    --self.text:SetPoint("CENTER", 0, 0)
-    --self.text:Show()
     local counter = 0
     for statIndex, statName in ipairs(stats) do
         self.text[statIndex] = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
         self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
-        self.text[statIndex]:SetWidth(150)
+        --self.text[statIndex]:SetWidth(150)
         self.text[statIndex]:SetHeight(16)
         self.text[statIndex]:SetShadowColor(0,0,0)
         self.text[statIndex]:SetShadowOffset(2,2)
@@ -398,13 +413,14 @@ function ShowMyStatsAddon:ConstructStatFrame()
         end
         self.text[statIndex]:Show()
     end
-    --local tex = self.f:CreateTexture("ARTWORK");
-    --tex:SetAllPoints();
-    --tex:SetTexture(1.0, 0.5, 0); tex:SetAlpha(0.5);
+    local tex = self.f:CreateTexture("ARTWORK");
+    tex:SetAllPoints();
+    tex:SetColorTexture(0,0,0); tex:SetAlpha(0.10);
     self:MoveStatFrame()
     self.f:Show()
 end
 function ShowMyStatsAddon:UpdateStatFrame()
+    local widestText = 0
     local counter = 0
     for statIndex, statName in ipairs(stats) do
         self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
@@ -415,12 +431,19 @@ function ShowMyStatsAddon:UpdateStatFrame()
             self.db.profile[statName].color.a
         )
         if self.db.profile[statName].enabled then
-            self.text[statIndex]:SetText(self:GetStatInfo(statName))
+            local text = self:GetStatInfo(statName)
+            self.text[statIndex]:SetText(text)
+            local stringWidth = self.text[statIndex]:GetStringWidth()
+            if stringWidth > widestText then
+                widestText = stringWidth
+            end
             counter = counter + 1
         else
             self.text[statIndex]:SetText("")
         end
     end
+
+    self:ResizeStatFrame(widestText, counter * 16)
 end
 function ShowMyStatsAddon:MoveStatFrame()
     self.f:ClearAllPoints()
@@ -429,4 +452,8 @@ function ShowMyStatsAddon:MoveStatFrame()
         self.db.profile.position.x,
         self.db.profile.position.y
     )
+end
+function ShowMyStatsAddon:ResizeStatFrame(width, height)
+    self.f:SetWidth(width)
+    self.f:SetHeight(height)
 end
