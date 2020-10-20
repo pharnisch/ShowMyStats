@@ -3,10 +3,14 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 local defaults = {
     profile = {
+        orientation = {
+            vertical = "DOWN",
+            --horizontal = "RIGHT"
+        },
         position = {
-            x = 0,
-            y = 0,
-            anchor = 'CENTER',
+            x = -150,
+            y = -250,
+            anchor = 'TOP',
         },
         mastery = {
             enabled = true,
@@ -110,11 +114,69 @@ function ShowMyStatsAddon:ShowConfigFrame()
         AceGUI:Release(widget) 
     end)
     frame:SetLayout("Flow") -- List/FLow/Fill
-    
-    local heading = AceGUI:Create("Heading")
-    heading:SetWidth(500)
-    heading:SetText("Please check all stats that you want to be shown.")
-    frame:AddChild(heading)
+
+    local headingPosition = AceGUI:Create("Heading")
+    headingPosition:SetWidth(500)
+    headingPosition:SetText("Please choose the desired position of the stat frame.")
+    frame:AddChild(headingPosition)
+
+    local sliderX = AceGUI:Create("Slider")
+    sliderX:SetValue(self.db.profile.position.x)
+    sliderX:SetCallback("OnValueChanged", function(widget, event, value)
+        self.db.profile.position.x = value
+        self:MoveStatFrame()
+    end)
+    sliderX:SetSliderValues(-1000, 1000, 1)
+    sliderX:SetLabel("x-Axis")
+    frame:AddChild(sliderX)
+
+    local sliderY = AceGUI:Create("Slider")
+    sliderY:SetValue(self.db.profile.position.y)
+    sliderY:SetCallback("OnValueChanged", function(widget, event, value)
+        self.db.profile.position.y = value
+        self:MoveStatFrame()
+    end)
+    sliderY:SetSliderValues(-1000, 1000, 1)
+    sliderY:SetLabel("y-Axis")
+    frame:AddChild(sliderY)
+
+    local dropdownAnchor = AceGUI:Create("Dropdown")
+    dropdownAnchor:SetWidth(250)
+    dropdownAnchor:SetList({
+        TOP = "top",
+        RIGHT = "right",
+        BOTTOM = "bottom",
+        LEFT = "left",
+        TOPRIGHT = "top right",
+        TOPLEFT = "top left",
+        BOTTOMLEFT = "bottom left",
+        BOTTOMRIGHT = "bottom right",
+        CENTER = "center"
+    })
+    dropdownAnchor:SetCallback("OnValueChanged", function(widget, event, key)
+        self.db.profile.position.anchor = key
+        self:MoveStatFrame()
+    end)
+    dropdownAnchor:SetValue(self.db.profile.position.anchor)
+    dropdownAnchor:SetLabel("Anchor")
+    frame:AddChild(dropdownAnchor)
+
+    ----------------------- STAT CONFIGS
+    local headingStats = AceGUI:Create("Heading")
+    headingStats:SetWidth(500)
+    headingStats:SetText("Please check all stats that you want to be shown.")
+    frame:AddChild(headingStats)
+
+    local scrollcontainer = AceGUI:Create("SimpleGroup") -- "InlineGroup" is also good
+    scrollcontainer:SetFullWidth(true)
+    scrollcontainer:SetFullHeight(true) -- probably?
+    scrollcontainer:SetLayout("Fill") -- important!
+    frame:AddChild(scrollcontainer)
+    local scroll = AceGUI:Create("ScrollFrame")
+    scroll:SetLayout("Flow") -- probably?
+    scrollcontainer:AddChild(scroll)
+
+
 
     for statIndex, statName in ipairs(stats) do
         local checkbox = AceGUI:Create("CheckBox")
@@ -122,11 +184,10 @@ function ShowMyStatsAddon:ShowConfigFrame()
         checkbox:SetWidth(250)
         checkbox:SetValue(self.db.profile[statName].enabled)
         checkbox:SetCallback("OnValueChanged", function(widget, event, value)
-            --self:RefreshConfig()
             self.db.profile[statName].enabled = value
-            self:Print(string.format("Changed %s to %s", statName, tostring(value)))
+            self:UpdateStatFrame()
         end)
-        frame:AddChild(checkbox)
+        scroll:AddChild(checkbox)
 
         local colorPicker = AceGUI:Create("ColorPicker")
         colorPicker:SetLabel(statName .. " color")
@@ -137,13 +198,21 @@ function ShowMyStatsAddon:ShowConfigFrame()
             self.db.profile[statName].color.b,
             self.db.profile[statName].color.a
         )
+        colorPicker:SetCallback("OnValueConfirmed", function(widget, event, r, g, b, a)
+            self.db.profile[statName].color.r = r
+            self.db.profile[statName].color.g = g
+            self.db.profile[statName].color.b = b
+            self.db.profile[statName].color.a = a
+            ShowMyStatsAddon:UpdateStatFrame()
+        end)
         colorPicker:SetCallback("OnValueChanged", function(widget, event, r, g, b, a)
             self.db.profile[statName].color.r = r
             self.db.profile[statName].color.g = g
             self.db.profile[statName].color.b = b
             self.db.profile[statName].color.a = a
+            ShowMyStatsAddon:UpdateStatFrame()
         end)
-        frame:AddChild(colorPicker)
+        scroll:AddChild(colorPicker)
     end
 end
 
@@ -282,62 +351,82 @@ end
 -- UnitDamage("unit")
 -- UnitRangeDamage/RangePower/Range...
 
+
 function ShowMyStatsAddon:UpdateHandler()
     ShowMyStatsAddon:ShowStatFrame()
 end
 function ShowMyStatsAddon:ShowStatFrame()
     if self.f == nil then
-        self.f = CreateFrame("Frame",nil,UIParent);
-        self.f:SetMovable(true)
-        self.f:EnableMouse(true)
-        self.f:RegisterForDrag("LeftButton")
-        self.f:SetScript("OnDragStart", self.f.StartMoving)
-        self.f:SetScript("OnDragStop", self.f.StopMovingOrSizing)
-        self.f:SetFrameStrata("BACKGROUND")
-        self.f:SetWidth(150) -- Set these to whatever height/width is needed 
-        self.f:SetHeight(200) -- for your Texture
-        --self.text = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-        --self.text:SetTextColor(0.5, 1, 0.2, 0.5)
-        --self.text:SetPoint("CENTER", 0, 0)
-        --self.text:Show()
-        for statIndex, statName in ipairs(stats) do
-            self.text[statName] = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-            self.text[statName]:SetWidth(150)
-            self.text[statName]:SetHeight(25)
-            self.text[statName]:SetShadowColor(0,0,0)
-            self.text[statName]:SetShadowOffset(2,2)
-            self.text[statName]:SetTextColor(
-                self.db.profile[statName].color.r,
-                self.db.profile[statName].color.g,
-                self.db.profile[statName].color.b,
-                self.db.profile[statName].color.a
-            )
-            if self.db.profile[statName].enabled then
-                self.text[statName]:SetText(self:GetStatInfo(statName))
-            else
-                self.text[statName]:SetText("")
-            end
-            self.text[statName]:SetPoint("TOP", 0, (statIndex-1) * (-20))
-            self.text[statName]:Show()
-        end
-        --local tex = self.f:CreateTexture("ARTWORK");
-        --tex:SetAllPoints();
-        --tex:SetTexture(1.0, 0.5, 0); tex:SetAlpha(0.5);
-        self.f:SetPoint("CENTER",-200,300)
-        self.f:Show()
+        self:ConstructStatFrame()
     end
-    --self.text:SetText(self:GetAllInfos())
+    self:UpdateStatFrame()
+end
+function ShowMyStatsAddon:ConstructStatFrame()
+    self.f = CreateFrame("Frame",nil,UIParent);
+    --self.f:SetMovable(true)
+    --self.f:EnableMouse(true)
+    --self.f:RegisterForDrag("LeftButton")
+    --self.f:SetScript("OnDragStart", self.f.StartMoving)
+    --self.f:SetScript("OnDragStop", self.f.StopMovingOrSizing)
+    --------------------------------------------self.f:SetScript("OnReceiveDrag", self.Test)
+    self.f:SetFrameStrata("BACKGROUND")
+    self.f:SetWidth(150) -- Set these to whatever height/width is needed 
+    self.f:SetHeight(200) -- for your Texture
+    --self.text = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    --self.text:SetTextColor(0.5, 1, 0.2, 0.5)
+    --self.text:SetPoint("CENTER", 0, 0)
+    --self.text:Show()
+    local counter = 0
     for statIndex, statName in ipairs(stats) do
-        self.text[statName]:SetTextColor(
+        self.text[statIndex] = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+        self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
+        self.text[statIndex]:SetWidth(150)
+        self.text[statIndex]:SetHeight(16)
+        self.text[statIndex]:SetShadowColor(0,0,0)
+        self.text[statIndex]:SetShadowOffset(2,2)
+        self.text[statIndex]:SetTextColor(
             self.db.profile[statName].color.r,
             self.db.profile[statName].color.g,
             self.db.profile[statName].color.b,
             self.db.profile[statName].color.a
         )
         if self.db.profile[statName].enabled then
-            self.text[statName]:SetText(self:GetStatInfo(statName))
+            self.text[statIndex]:SetText(self:GetStatInfo(statName))
+            counter = counter + 1
         else
-            self.text[statName]:SetText("")
+            self.text[statIndex]:SetText("")
+        end
+        self.text[statIndex]:Show()
+    end
+    --local tex = self.f:CreateTexture("ARTWORK");
+    --tex:SetAllPoints();
+    --tex:SetTexture(1.0, 0.5, 0); tex:SetAlpha(0.5);
+    self:MoveStatFrame()
+    self.f:Show()
+end
+function ShowMyStatsAddon:UpdateStatFrame()
+    local counter = 0
+    for statIndex, statName in ipairs(stats) do
+        self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
+        self.text[statIndex]:SetTextColor(
+            self.db.profile[statName].color.r,
+            self.db.profile[statName].color.g,
+            self.db.profile[statName].color.b,
+            self.db.profile[statName].color.a
+        )
+        if self.db.profile[statName].enabled then
+            self.text[statIndex]:SetText(self:GetStatInfo(statName))
+            counter = counter + 1
+        else
+            self.text[statIndex]:SetText("")
         end
     end
+end
+function ShowMyStatsAddon:MoveStatFrame()
+    self.f:ClearAllPoints()
+    self.f:SetPoint(
+        self.db.profile.position.anchor,
+        self.db.profile.position.x,
+        self.db.profile.position.y
+    )
 end
