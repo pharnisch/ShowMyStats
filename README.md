@@ -26,4 +26,5 @@ Following stats are currently supported:
     - Spell Haste
     - Versatility
     - Absorb
-    - (work in progress for more stats)
+    - Speed
+    - Armor
