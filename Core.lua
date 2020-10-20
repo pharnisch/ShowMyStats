@@ -304,6 +304,8 @@ function ShowMyStatsAddon:ShowStatFrame()
             self.text[statName] = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
             self.text[statName]:SetWidth(150)
             self.text[statName]:SetHeight(25)
+            self.text[statName]:SetShadowColor(0,0,0)
+            self.text[statName]:SetShadowOffset(2,2)
             self.text[statName]:SetTextColor(
                 self.db.profile[statName].color.r,
                 self.db.profile[statName].color.g,
