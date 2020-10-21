@@ -36,20 +36,18 @@ local defaults = {
     }
 }
 local stats = {
-    
     "strength",
     "agility",
     "intellect",
     "stamina",
-    
-    
+
     "crit",
     "haste",
     "mastery",
     "versatility",
     "lifesteal",
     "avoidance",
-    "speed",
+    --"speed",
 
     "manaregen",
 
@@ -58,7 +56,6 @@ local stats = {
     "parry",
     "block",
     "stagger",
-
 
     "absorb"
 }
@@ -87,14 +84,51 @@ function ShowMyStatsAddon:OnInitialize()
     self.configFrameShown = false
     self.text = {}
 
-    self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateHandler")
-    self:RegisterEvent("UNIT_AURA", "UpdateHandler")
+    --self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateHandler")
+    --self:RegisterEvent("UNIT_AURA", "UpdateHandler")
     self:RegisterEvent("UPDATE_SHAPESHIFT_FORM", "UpdateHandler")
-    self:RegisterEvent("UNIT_INVENTORY_CHANGED", "UpdateHandler")
-    self:RegisterEvent("UNIT_LEVEL", "UpdateHandler")
+    --self:RegisterEvent("UNIT_INVENTORY_CHANGED", "UpdateHandler")
+    --self:RegisterEvent("UNIT_LEVEL", "UpdateHandler")
     self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateHandler")
     self:RegisterEvent("PLAYER_REGEN_DISABLED", "UpdateHandler")
-    self:RegisterEvent("PLAYER_TALENT_UPDATE", "UpdateHandler")
+    --self:RegisterEvent("PLAYER_TALENT_UPDATE", "UpdateHandler")
+
+    -- official events from doll code
+    self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateHandler");
+	self:RegisterEvent("CHARACTER_POINTS_CHANGED", "UpdateHandler");
+	self:RegisterEvent("UNIT_MODEL_CHANGED", "UpdateHandler");
+	self:RegisterEvent("UNIT_LEVEL", "UpdateHandler");
+	self:RegisterEvent("UNIT_STATS", "UpdateHandler");
+	self:RegisterEvent("UNIT_RANGEDDAMAGE", "UpdateHandler");
+	self:RegisterEvent("UNIT_ATTACK_POWER", "UpdateHandler");
+	self:RegisterEvent("UNIT_RANGED_ATTACK_POWER", "UpdateHandler");
+	self:RegisterEvent("UNIT_ATTACK", "UpdateHandler");
+	self:RegisterEvent("UNIT_SPELL_HASTE", "UpdateHandler");
+	self:RegisterEvent("UNIT_RESISTANCES", "UpdateHandler");
+	self:RegisterEvent("PLAYER_GUILD_UPDATE", "UpdateHandler");
+	self:RegisterEvent("SKILL_LINES_CHANGED", "UpdateHandler");
+	self:RegisterEvent("COMBAT_RATING_UPDATE", "UpdateHandler");
+	self:RegisterEvent("MASTERY_UPDATE", "UpdateHandler");
+	self:RegisterEvent("SPEED_UPDATE", "UpdateHandler");
+	self:RegisterEvent("LIFESTEAL_UPDATE", "UpdateHandler");
+	self:RegisterEvent("AVOIDANCE_UPDATE", "UpdateHandler");
+	self:RegisterEvent("KNOWN_TITLES_UPDATE", "UpdateHandler");
+	self:RegisterEvent("UNIT_NAME_UPDATE", "UpdateHandler");
+	self:RegisterEvent("PLAYER_TALENT_UPDATE", "UpdateHandler");
+	self:RegisterEvent("BAG_UPDATE", "UpdateHandler");
+	self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "UpdateHandler");
+	self:RegisterEvent("PLAYER_AVG_ITEM_LEVEL_UPDATE", "UpdateHandler");
+	self:RegisterEvent("PLAYER_DAMAGE_DONE_MODS", "UpdateHandler");
+	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED", "UpdateHandler");
+	self:RegisterEvent("UNIT_DAMAGE", "UpdateHandler");
+	self:RegisterEvent("UNIT_ATTACK_SPEED", "UpdateHandler");
+	self:RegisterEvent("UNIT_MAXHEALTH", "UpdateHandler");
+	self:RegisterEvent("UNIT_AURA", "UpdateHandler");
+	self:RegisterEvent("SPELL_POWER_CHANGED", "UpdateHandler");
+	self:RegisterEvent("CHARACTER_ITEM_FIXUP_NOTIFICATION", "UpdateHandler");
+	self:RegisterEvent("TRIAL_STATUS_UPDATE", "UpdateHandler");
+	self:RegisterEvent("PLAYER_TARGET_CHANGED", "UpdateHandler");
+	self:RegisterEvent("GX_RESTARTED", "UpdateHandler");
 end
 
 function ShowMyStatsAddon:OnEnable()
@@ -311,9 +345,11 @@ function ShowMyStatsAddon:GetAbsorbInfo()
 end
 
 function ShowMyStatsAddon:GetSpeedInfo()
-    --local currentSpeed, runningSpeed = GetUnitSpeed("player")
-    local speed = GetSpeed();
-    return string.format("Speed: %.0f%%", speed)
+    local currentSpeed, runningSpeed, flightSpeed, swimSpeed = GetUnitSpeed("player")
+    local maxSpeed = max(currentSpeed, runningSpeed, flightSpeed, swimSpeed)
+    maxSpeed = maxSpeed - BASE_MOVEMENT_SPEED
+    maxSpeed = (maxSpeed / 7) * 100
+    return string.format("Speed: %.0f%%", maxSpeed)
 end
 
 function ShowMyStatsAddon:GetArmorInfo()
@@ -344,10 +380,10 @@ end
 function ShowMyStatsAddon:GetManaRegenInfo()
 	local base, combat = GetManaRegen();
 	-- All mana regen stats are displayed as mana/5 sec.
-	base = floor(base * 5.0);
-	combat = floor(combat * 5.0);
+	--base = floor(base * 5.0);
+	--combat = floor(combat * 5.0);
     -- Combat mana regen is most important to the player, so we display it as the main value
-    return string.format("Mana per five seconds: %.0f", combat)
+    return string.format("Mana per second: %.0f", combat)
 end
 
 function ShowMyStatsAddon:GetLifeStealInfo()
@@ -446,7 +482,7 @@ end
 
 
 
-function ShowMyStatsAddon:UpdateHandler()
+function ShowMyStatsAddon:UpdateHandler(event, arg1, arg2)
     ShowMyStatsAddon:ShowStatFrame()
 end
 function ShowMyStatsAddon:ShowStatFrame()
