@@ -36,17 +36,31 @@ local defaults = {
     }
 }
 local stats = {
+    
     "strength",
     "agility",
-    "stamina",
     "intellect",
-    "mastery",
-    "haste",
+    "stamina",
+    
+    
     "crit",
+    "haste",
+    "mastery",
     "versatility",
-    "absorb",
+    "lifesteal",
+    "avoidance",
+    "speed",
+
+    "manaregen",
+
     "armor",
-    "speed"
+    "dodge",
+    "parry",
+    "block",
+    "stagger",
+
+
+    "absorb"
 }
 local options = {
     name = "ShowMyStats",
@@ -238,7 +252,7 @@ end
 
 
 
-
+--https://www.townlong-yak.com/framexml/live/PaperDollFrame.lua
 local mainStatIndex = {
     strength = 1,
     agility = 2,
@@ -246,69 +260,104 @@ local mainStatIndex = {
     intellect = 4,
 }
 function ShowMyStatsAddon:GetMainStatInfo(mainStatName)
-    base, stat, posBuff, negBuff = UnitStat("player", mainStatIndex[mainStatName])
+    local base, stat, posBuff, negBuff = UnitStat("player", mainStatIndex[mainStatName])
     return mainStatName .. ": " .. stat
 end
 
 function ShowMyStatsAddon:GetMasteryInfo()
-    masteryeffect, coefficient = GetMasteryEffect() -- mastery*coefficient=masteryeffect
-    mastery = GetMastery() -- pure value 
+    local masteryeffect, coefficient = GetMasteryEffect() -- mastery*coefficient=masteryeffect
+    local mastery = GetMastery() -- pure value 
     return "Mastery: " .. string.format("%.0f%%", masteryeffect)
 end
 
 function ShowMyStatsAddon:GetCritInfo()
-    shadowSpellCrit = GetSpellCritChance(6)
-    return "SpellCrit: " .. string.format("%.0f%%", shadowSpellCrit)
+	local spellCrit, rangedCrit, meleeCrit;
+	local critChance;
+	-- Start at 2 to skip physical damage
+	local holySchool = 2;
+	local minCrit = GetSpellCritChance(holySchool);
+	local spellCrit;
+	for i=(holySchool+1), 7 do
+		spellCrit = GetSpellCritChance(i);
+		minCrit = min(minCrit, spellCrit);
+	end
+	spellCrit = minCrit
+	rangedCrit = GetRangedCritChance();
+	meleeCrit = GetCritChance();
+	if (spellCrit >= rangedCrit and spellCrit >= meleeCrit) then
+		critChance = spellCrit;
+	elseif (rangedCrit >= meleeCrit) then
+		critChance = rangedCrit;
+	else
+		critChance = meleeCrit;
+	end
+    return "Crit: " .. string.format("%.0f%%", critChance)
 end
 
 function ShowMyStatsAddon:GetHasteInfo()
-    spellHastePercent  = UnitSpellHaste("player")
-    return "Spell Haste: " .. string.format("%.0f%%", spellHastePercent)
+    local haste = GetHaste()
+    return "Haste: " .. string.format("%.0f%%", haste)
 end
 
-local versatilityRatingArray = { -- from askmrrobot (index is level, number is required rate per 1% versa => versa=versarating/versaratingarray(lvl))
-    0, 3.091154721, 3.091154721, 3.091154721, 3.091154721, 3.091154721, 3.091154721, 3.091154721, 3.091154721, 3.091154721, 3.091154721, 3.091154721, 3.245712457, 3.400270193, 3.554827929, 3.709385665, 3.863943401, 4.018501137, 4.173058873, 4.327616609, 4.482174345, 4.636732081, 4.791289817, 4.945847553, 5.100405289, 5.254963025, 5.414083305, 5.579537691, 5.751610634, 5.930600757, 6.11682162, 6.310602529, 6.512289386, 6.722245596, 6.940853023, 7.168513002, 7.405647412, 7.65269981, 7.910136631, 8.178448466, 8.458151403, 8.773380327, 9.100357595, 9.439521059, 9.79132489, 10.15624018, 10.5347556, 10.92737799, 11.33463313, 11.75706636, 12.19524335, 13.46417035, 14.86513044, 16.4118618, 18.11953208, 20.00488711, 22.08641518, 24.38452828, 26.92176229, 29.72299799, 40.0000001
-}
 function ShowMyStatsAddon:GetVersatilityInfo()
-    local level = UnitLevel("player")
-    local versatilityRatingPerPercent = versatilityRatingArray[level+1]
-    local versaStat = GetCombatRating(29)
-    pre25Versa = 0
-    pre34Versa = 0
-    pre42Versa = 0
-    pre49Versa = 0
-    pre106Versa = 0
-
-    for i=1, versaStat, 1 do
-        if pre25Versa <= 25 then
-            pre25Versa = i/versatilityRatingPerPercent
-        elseif pre25Versa+pre34Versa <= 34 then
-            pre34Versa = i/versatilityRatingPerPercent
-        elseif pre25Versa+pre34Versa+pre42Versa <= 42 then
-            pre42Versa = i/versatilityRatingPerPercent
-        elseif pre25Versa+pre34Versa+pre42Versa+pre49Versa <= 49 then
-            pre49Versa = i/versatilityRatingPerPercent
-        elseif pre25Versa+pre34Versa+pre42Versa+pre49Versa+pre106Versa <= 106 then
-            pre106Versa = i/versatilityRatingPerPercent
-        end
-    end
-    versa = pre25Versa + pre34Versa + pre42Versa + pre49Versa + pre106Versa
-    return "Versatility: " .. string.format("%.0f%%", versa)
+    local versatilityDamageBonus = GetCombatRatingBonus(29) + GetVersatilityBonus(29);
+	local versatilityDamageTakenReduction = GetCombatRatingBonus(31) + GetVersatilityBonus(31);
+    return string.format("Versatility: %.0f%%", versatilityDamageBonus)
 end
 
 function ShowMyStatsAddon:GetAbsorbInfo()
     local absorb = UnitGetTotalAbsorbs("player")
-    return "Absorb: " .. absorb
+    return string.format("Absorb: %d", absorb)
 end
 
 function ShowMyStatsAddon:GetSpeedInfo()
-    currentSpeed, runningSpeed = GetUnitSpeed("player")
-    return string.format("Speed: %d%%", (runningSpeed / 7) * 100)
+    --local currentSpeed, runningSpeed = GetUnitSpeed("player")
+    local speed = GetSpeed();
+    return string.format("Speed: %.0f%%", speed)
 end
 
 function ShowMyStatsAddon:GetArmorInfo()
     base, effectiveArmor, armor, posBuff, negBuff = UnitArmor("player");
     return string.format("Armor: %d", effectiveArmor)
+end
+
+function ShowMyStatsAddon:GetStaggerInfo()
+    local stagger, staggerAgainstTarget = C_PaperDollInfo.GetStaggerPercentage("player");
+    return string.format("Stagger: %.0f%%", stagger)
+end
+
+function ShowMyStatsAddon:GetDodgeInfo()
+    local chance = GetDodgeChance()
+    return string.format("Dodge: %.0f%%", chance)
+end
+
+function ShowMyStatsAddon:GetBlockInfo()
+    local chance = GetBlockChance()
+    return string.format("Block: %.0f%%", chance)
+end
+
+function ShowMyStatsAddon:GetParryInfo()
+    local chance = GetParryChance()
+    return string.format("Parry: %.0f%%", chance)
+end
+
+function ShowMyStatsAddon:GetManaRegenInfo()
+	local base, combat = GetManaRegen();
+	-- All mana regen stats are displayed as mana/5 sec.
+	base = floor(base * 5.0);
+	combat = floor(combat * 5.0);
+    -- Combat mana regen is most important to the player, so we display it as the main value
+    return string.format("Mana per five seconds: %.0f", combat)
+end
+
+function ShowMyStatsAddon:GetLifeStealInfo()
+    local lifesteal = GetLifesteal();
+    return string.format("Lifesteal: %.0f%%", lifesteal)
+end
+
+function ShowMyStatsAddon:GetAvoidanceInfo()
+    local avoidance = GetAvoidance();
+    return string.format("Avoidance: %.0f%%", avoidance)
 end
 
 function ShowMyStatsAddon:GetStatInfo(statName)
@@ -334,6 +383,20 @@ function ShowMyStatsAddon:GetStatInfo(statName)
         return self:GetSpeedInfo()
     elseif statName == "armor" then
         return self:GetArmorInfo()
+    elseif statName == "stagger" then
+        return self:GetStaggerInfo()
+    elseif statName == "dodge" then
+        return self:GetDodgeInfo()
+    elseif statName == "block" then
+        return self:GetBlockInfo()
+    elseif statName == "parry" then
+        return self:GetParryInfo()
+    elseif statName == "manaregen" then
+        return self:GetManaRegenInfo()
+    elseif statName == "lifesteal" then
+        return self:GetLifeStealInfo()
+    elseif statName == "avoidance" then
+        return self:GetAvoidanceInfo()
     end
 end
 
