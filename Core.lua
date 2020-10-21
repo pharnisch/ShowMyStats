@@ -83,6 +83,7 @@ function ShowMyStatsAddon:OnInitialize()
     self.db.RegisterCallback(self, "OnProfileReset", "RefreshConfig")
     self.configFrameShown = false
     self.text = {}
+    self:CreateInterfaceOptionsFrame()
 
     --self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateHandler")
     --self:RegisterEvent("UNIT_AURA", "UpdateHandler")
@@ -152,7 +153,18 @@ end
 LibStub("AceConfig-3.0"):RegisterOptionsTable("ShowMyStats", options, {"sms", "showmystats"})
 
 
+function ShowMyStatsAddon:CreateInterfaceOptionsFrame()
+    local frame = CreateFrame( "Frame", "ShowMyStats", UIParent);
+    frame.name = "ShowMyStats"
+    InterfaceOptions_AddCategory(frame)
 
+    local fontString = frame:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+    fontString:SetPoint("CENTER", 0, 0)
+    fontString:SetText("Please type /sms or /showmystats into your chat window to open the configuration panel of this addon.")
+    fontString:SetWidth(500)
+    --fontString:SetHeight(500)
+    fontString:Show()
+end
 
 ShowMyStatsAddon:RegisterChatCommand("sms", "ShowConfigFrame")
 ShowMyStatsAddon:RegisterChatCommand("showmystats", "ShowConfigFrame")
@@ -276,6 +288,7 @@ end
 function ShowMyStatsAddon:RefreshConfig()
     self:Print("refresh config")
 end
+
 
 
 
@@ -506,8 +519,8 @@ function ShowMyStatsAddon:ConstructStatFrame()
         self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
         --self.text[statIndex]:SetWidth(150)
         self.text[statIndex]:SetHeight(16)
-        self.text[statIndex]:SetShadowColor(0,0,0)
-        self.text[statIndex]:SetShadowOffset(2,2)
+        --self.text[statIndex]:SetShadowColor(0,0,0)
+        --self.text[statIndex]:SetShadowOffset(2,2)
         self.text[statIndex]:SetTextColor(
             self.db.profile[statName].color.r,
             self.db.profile[statName].color.g,
