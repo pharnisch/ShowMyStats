@@ -14,22 +14,46 @@ local defaults = {
         },
         haste = {
             enabled = true,
+            color = {
+                r = 0.4,
+                g = 0.7,
+                b = 0.9,
+                a = 1,
+            },
         },
         crit = {
             enabled = true,
+            color = {
+                r = 0.9,
+                g = 0.7,
+                b = 0.4,
+                a = 1,
+            },
         },
         mastery = {
             enabled = true,
+            color = {
+                r = 0.3,
+                g = 0.3,
+                b = 0.9,
+                a = 1,
+            },
         },
         versatility = {
             enabled = true,
+            color = {
+                r = 0.2,
+                g = 0.9,
+                b = 0.4,
+                a = 1,
+            },
         },
         ['**'] = {
             enabled = false,
             color = {
-                r = 255,
-                g = 255,
-                b = 255,
+                r = 255/255,
+                g = 255/255,
+                b = 255/255,
                 a = 1,
             },
         },
@@ -76,7 +100,6 @@ local options = {
 
 function ShowMyStatsAddon:OnInitialize()
     -- Code that you want to run when the addon is first loaded goes here.
-    self:Print("Hello World!")
     self.db = LibStub("AceDB-3.0"):New("ShowMyStatsDB", defaults)
     self.db.RegisterCallback(self, "OnProfileChanged", "RefreshConfig")
     self.db.RegisterCallback(self, "OnProfileCopied", "RefreshConfig")
@@ -286,7 +309,7 @@ end
 
 -- HOW TO HANDLE USER PROFILES AND WHAT KIND OF CONFIG TO REFRESH?
 function ShowMyStatsAddon:RefreshConfig()
-    self:Print("refresh config")
+    --self:Print("refresh config")
 end
 
 
@@ -366,8 +389,9 @@ function ShowMyStatsAddon:GetSpeedInfo()
 end
 
 function ShowMyStatsAddon:GetArmorInfo()
-    base, effectiveArmor, armor, posBuff, negBuff = UnitArmor("player");
-    return string.format("Armor: %d", effectiveArmor)
+    local base, effectiveArmor, armor, posBuff, negBuff = UnitArmor("player");
+    local armorReduction = PaperDollFrame_GetArmorReduction(effectiveArmor, UnitEffectiveLevel("player"));
+    return string.format("Armor: %d (%.0f%%)", effectiveArmor, armorReduction)
 end
 
 function ShowMyStatsAddon:GetStaggerInfo()
@@ -537,7 +561,7 @@ function ShowMyStatsAddon:ConstructStatFrame()
     end
     local tex = self.f:CreateTexture("ARTWORK");
     tex:SetAllPoints();
-    tex:SetColorTexture(0,0,0); tex:SetAlpha(0.10);
+    tex:SetColorTexture(0,0,0); tex:SetAlpha(0.25);
     self:MoveStatFrame()
     self.f:Show()
 end
