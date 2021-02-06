@@ -3,9 +3,41 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 local defaults = {
     profile = {
+        stats = {
+            "strength",
+            "agility",
+            "intellect",
+            "stamina",
+        
+            "crit",
+            "haste",
+            "mastery",
+            "versatility",
+            "lifesteal",
+            "avoidance",
+            --"speed",
+        
+            "manaregen",
+        
+            "armor",
+            "dodge",
+            "parry",
+            "block",
+            "stagger",
+        
+            "absorb"
+        },
         orientation = {
             vertical = "DOWN",
             --horizontal = "RIGHT"
+        },
+        background = {
+            color = {
+                r = 0,
+                g = 0,
+                b = 0,
+                a = 0.25,
+            },
         },
         position = {
             x = -150,
@@ -59,44 +91,6 @@ local defaults = {
         },
     }
 }
-local stats = {
-    "strength",
-    "agility",
-    "intellect",
-    "stamina",
-
-    "crit",
-    "haste",
-    "mastery",
-    "versatility",
-    "lifesteal",
-    "avoidance",
-    --"speed",
-
-    "manaregen",
-
-    "armor",
-    "dodge",
-    "parry",
-    "block",
-    "stagger",
-
-    "absorb"
-}
-local options = {
-    name = "ShowMyStats",
-    handler = ShowMyStatsAddon,
-    type = 'group',
-    args = {
-        msg = {
-            type = 'input',
-            name = 'My Message',
-            desc = 'The message for my addon',
-            set = 'SetMyMessage',
-            get = 'GetMyMessage',
-        },
-    },
-}
 
 function ShowMyStatsAddon:OnInitialize()
     -- Code that you want to run when the addon is first loaded goes here.
@@ -108,14 +102,10 @@ function ShowMyStatsAddon:OnInitialize()
     self.text = {}
     self:CreateInterfaceOptionsFrame()
 
-    --self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateHandler")
-    --self:RegisterEvent("UNIT_AURA", "UpdateHandler")
     self:RegisterEvent("UPDATE_SHAPESHIFT_FORM", "UpdateHandler")
     --self:RegisterEvent("UNIT_INVENTORY_CHANGED", "UpdateHandler")
-    --self:RegisterEvent("UNIT_LEVEL", "UpdateHandler")
     self:RegisterEvent("PLAYER_REGEN_ENABLED", "UpdateHandler")
     self:RegisterEvent("PLAYER_REGEN_DISABLED", "UpdateHandler")
-    --self:RegisterEvent("PLAYER_TALENT_UPDATE", "UpdateHandler")
 
     -- official events from doll code
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "UpdateHandler");
@@ -167,6 +157,20 @@ end
 
 
 
+local options = { -- TODO: what is this?
+    name = "ShowMyStats",
+    handler = ShowMyStatsAddon,
+    type = 'group',
+    args = {
+        msg = {
+            type = 'input',
+            name = 'My Message',
+            desc = 'The message for my addon',
+            set = 'SetMyMessage',
+            get = 'GetMyMessage',
+        },
+    },
+}
 function ShowMyStatsAddon:GetMyMessage(info)
     return myMessageVar
 end
@@ -177,16 +181,26 @@ LibStub("AceConfig-3.0"):RegisterOptionsTable("ShowMyStats", options, {"sms", "s
 
 
 function ShowMyStatsAddon:CreateInterfaceOptionsFrame()
-    local frame = CreateFrame( "Frame", "ShowMyStats", UIParent);
+    local frame = CreateFrame("Frame", "ShowMyStats", UIParent);
     frame.name = "ShowMyStats"
     InterfaceOptions_AddCategory(frame)
 
     local fontString = frame:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    fontString:SetPoint("CENTER", 0, 0)
-    fontString:SetText("Please type /sms or /showmystats into your chat window to open the configuration panel of this addon.")
+    fontString:SetPoint("CENTER", 0, 200)
+    fontString:SetText("Please click the button below to open the configuration panel of this Addon. You can also type /sms or /showmystats into your chat window to open it.")
     fontString:SetWidth(500)
     --fontString:SetHeight(500)
     fontString:Show()
+
+    local button = CreateFrame("Button", "ButtonTest", frame, "UIPanelButtonTemplate")
+    button:SetSize(180, 22)
+    button:SetText("Open configuration panel")
+    button:SetPoint("CENTER",0, 150)
+    button:SetScript("OnClick", function()
+        self:ShowConfigFrame()
+    end)
+    --button:Show()
+    --frame:AddChild(button)
 end
 
 ShowMyStatsAddon:RegisterChatCommand("sms", "ShowConfigFrame")
@@ -198,6 +212,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
     self.configFrameShown = true
 
     local frame = AceGUI:Create("Frame")
+    self.configFrame = frame
     frame:SetTitle("ShowMyStats")
     frame:SetStatusText("ShowMyStats Configuration Panel")
     frame:SetCallback("OnClose", function(widget) 
@@ -208,8 +223,9 @@ function ShowMyStatsAddon:ShowConfigFrame()
 
     local headingPosition = AceGUI:Create("Heading")
     headingPosition:SetWidth(500)
-    headingPosition:SetText("Please choose the desired position of the stat frame.")
+    headingPosition:SetText("Please choose the desired position and colour of the stat frame.")
     frame:AddChild(headingPosition)
+
 
     local sliderX = AceGUI:Create("Slider")
     sliderX:SetValue(self.db.profile.position.x)
@@ -232,17 +248,17 @@ function ShowMyStatsAddon:ShowConfigFrame()
     frame:AddChild(sliderY)
 
     local dropdownAnchor = AceGUI:Create("Dropdown")
-    dropdownAnchor:SetWidth(250)
+    --dropdownAnchor:SetWidth(250)
     dropdownAnchor:SetList({
-        TOP = "top",
-        RIGHT = "right",
-        BOTTOM = "bottom",
-        LEFT = "left",
-        TOPRIGHT = "top right",
-        TOPLEFT = "top left",
-        BOTTOMLEFT = "bottom left",
-        BOTTOMRIGHT = "bottom right",
-        CENTER = "center"
+        TOP = "Top",
+        RIGHT = "Right",
+        BOTTOM = "Bottom",
+        LEFT = "Left",
+        TOPRIGHT = "Top right",
+        TOPLEFT = "Top left",
+        BOTTOMLEFT = "Bottom left",
+        BOTTOMRIGHT = "Bottom right",
+        CENTER = "Center"
     })
     dropdownAnchor:SetCallback("OnValueChanged", function(widget, event, key)
         self.db.profile.position.anchor = key
@@ -252,13 +268,41 @@ function ShowMyStatsAddon:ShowConfigFrame()
     dropdownAnchor:SetLabel("Anchor")
     frame:AddChild(dropdownAnchor)
 
+    local colorPickerBackground = AceGUI:Create("ColorPicker")
+    colorPickerBackground:SetHasAlpha(true)
+    colorPickerBackground:SetLabel("Background colour")
+    --colorPickerBackground:SetWidth(250)
+    colorPickerBackground:SetColor(
+        self.db.profile.background.color.r, 
+        self.db.profile.background.color.g,
+        self.db.profile.background.color.b,
+        self.db.profile.background.color.a
+    )
+    colorPickerBackground:SetCallback("OnValueConfirmed", function(widget, event, r, g, b, a)
+        self.db.profile.background.color.r = r
+        self.db.profile.background.color.g = g
+        self.db.profile.background.color.b = b
+        self.db.profile.background.color.a = a
+        ShowMyStatsAddon:UpdateStatFrameBackgroundTexture()
+    end)
+    colorPickerBackground:SetCallback("OnValueChanged", function(widget, event, r, g, b, a)
+        self.db.profile.background.color.r = r
+        self.db.profile.background.color.g = g
+        self.db.profile.background.color.b = b
+        self.db.profile.background.color.a = a
+        ShowMyStatsAddon:UpdateStatFrameBackgroundTexture()
+    end)
+    frame:AddChild(colorPickerBackground)
+
+
+
     ----------------------- STAT CONFIGS
     local headingStats = AceGUI:Create("Heading")
     headingStats:SetWidth(500)
-    headingStats:SetText("Please check all stats that you want to be shown.")
+    headingStats:SetText("Modify which stats will be shown and in which colour.")
     frame:AddChild(headingStats)
 
-    local scrollcontainer = AceGUI:Create("SimpleGroup") -- "InlineGroup" is also good
+    local scrollcontainer = AceGUI:Create("InlineGroup") -- best: SimpleGroup "InlineGroup" is also good
     scrollcontainer:SetFullWidth(true)
     scrollcontainer:SetFullHeight(true) -- probably?
     scrollcontainer:SetLayout("Fill") -- important!
@@ -269,10 +313,10 @@ function ShowMyStatsAddon:ShowConfigFrame()
 
 
 
-    for statIndex, statName in ipairs(stats) do
+    for statIndex, statName in ipairs(self.db.profile.stats) do
         local checkbox = AceGUI:Create("CheckBox")
-        checkbox:SetLabel(statName .. " enabled")
-        checkbox:SetWidth(250)
+        checkbox:SetLabel(firstToUpper(statName) .. " enabled")
+        checkbox:SetWidth(200)
         checkbox:SetValue(self.db.profile[statName].enabled)
         checkbox:SetCallback("OnValueChanged", function(widget, event, value)
             self.db.profile[statName].enabled = value
@@ -281,8 +325,8 @@ function ShowMyStatsAddon:ShowConfigFrame()
         scroll:AddChild(checkbox)
 
         local colorPicker = AceGUI:Create("ColorPicker")
-        colorPicker:SetLabel(statName .. " color")
-        colorPicker:SetWidth(250)
+        colorPicker:SetLabel(firstToUpper(statName) .. " colour")
+        colorPicker:SetWidth(200)
         colorPicker:SetColor(
             self.db.profile[statName].color.r, 
             self.db.profile[statName].color.g,
@@ -304,6 +348,59 @@ function ShowMyStatsAddon:ShowConfigFrame()
             ShowMyStatsAddon:UpdateStatFrame()
         end)
         scroll:AddChild(colorPicker)
+
+--[[    local buttonUp = AceGUI:Create("Button") -- alternative: Icon 
+        buttonUp:SetWidth(80)
+        buttonUp:SetText("Up")
+        scroll:AddChild(buttonUp)
+
+        local buttonDown = AceGUI:Create("Button")
+        buttonDown:SetWidth(80)
+        buttonDown:SetText("Down")
+        scroll:AddChild(buttonDown) ]]
+
+        iconSize = 20
+        iconPadding = 2
+        local iconUp = AceGUI:Create("Icon")
+        
+        iconUp:SetImageSize(iconSize, iconSize)
+        iconUp:SetWidth(iconSize + iconPadding * 2)
+
+        if statIndex ~= 1 then
+            iconUp:SetImage(293773) -- FileDataID (newer method) or filePath (older one)
+            iconUp:SetCallback("OnClick", function(widget, event, test)
+                local tmp = self.db.profile.stats[statIndex]
+                self.db.profile.stats[statIndex] = self.db.profile.stats[statIndex - 1]
+                self.db.profile.stats[statIndex - 1] = tmp
+                self.configFrameShown = false
+                self.configFrame:Release()
+                self:ShowConfigFrame()
+                self:UpdateStatFrame()
+            end)
+        else
+            iconUp:SetDisabled(true)
+        end
+        scroll:AddChild(iconUp)
+
+        local iconDown = AceGUI:Create("Icon")
+            
+            iconDown:SetImageSize(iconSize, iconSize)
+            iconDown:SetWidth(iconSize + iconPadding * 2)
+        if statIndex ~= table.getn(self.db.profile.stats) then
+            iconDown:SetImage(293770)
+            iconDown:SetCallback("OnClick", function(widget, event, test)
+                local tmp = self.db.profile.stats[statIndex]
+                self.db.profile.stats[statIndex] = self.db.profile.stats[statIndex + 1]
+                self.db.profile.stats[statIndex + 1] = tmp
+                self.configFrameShown = false
+                self.configFrame:Release()
+                self:ShowConfigFrame()
+                self:UpdateStatFrame()
+            end)
+        else
+            iconDown:SetDisabled(true)
+        end
+        scroll:AddChild(iconDown)
     end
 end
 
@@ -331,7 +428,7 @@ local mainStatIndex = {
 }
 function ShowMyStatsAddon:GetMainStatInfo(mainStatName)
     local base, stat, posBuff, negBuff = UnitStat("player", mainStatIndex[mainStatName])
-    return mainStatName .. ": " .. stat
+    return firstToUpper(mainStatName) .. ": " .. stat
 end
 
 function ShowMyStatsAddon:GetMasteryInfo()
@@ -528,6 +625,7 @@ function ShowMyStatsAddon:ShowStatFrame()
     end
     self:UpdateStatFrame()
 end
+
 function ShowMyStatsAddon:ConstructStatFrame()
     self.f = CreateFrame("Frame",nil,UIParent);
     --self.f:SetMovable(true)
@@ -538,7 +636,7 @@ function ShowMyStatsAddon:ConstructStatFrame()
     --------------------------------------------self.f:SetScript("OnReceiveDrag", self.Test)
     self.f:SetFrameStrata("BACKGROUND")
     local counter = 0
-    for statIndex, statName in ipairs(stats) do
+    for statIndex, statName in ipairs(self.db.profile.stats) do
         self.text[statIndex] = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
         self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
         --self.text[statIndex]:SetWidth(150)
@@ -559,16 +657,22 @@ function ShowMyStatsAddon:ConstructStatFrame()
         end
         self.text[statIndex]:Show()
     end
-    local tex = self.f:CreateTexture("ARTWORK");
-    tex:SetAllPoints();
-    tex:SetColorTexture(0,0,0); tex:SetAlpha(0.25);
+    self.backgroundTexture = self.f:CreateTexture("ARTWORK");
+    self.backgroundTexture:SetAllPoints();
+    self.backgroundTexture:SetColorTexture(
+        self.db.profile.background.color.r,
+        self.db.profile.background.color.g,
+        self.db.profile.background.color.b
+    ); 
+    self.backgroundTexture:SetAlpha(self.db.profile.background.color.a);
     self:MoveStatFrame()
     self.f:Show()
 end
+
 function ShowMyStatsAddon:UpdateStatFrame()
     local widestText = 0
     local counter = 0
-    for statIndex, statName in ipairs(stats) do
+    for statIndex, statName in ipairs(self.db.profile.stats) do
         self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
         self.text[statIndex]:SetTextColor(
             self.db.profile[statName].color.r,
@@ -589,8 +693,9 @@ function ShowMyStatsAddon:UpdateStatFrame()
         end
     end
 
-    self:ResizeStatFrame(widestText, counter * 16)
+    self:ResizeStatFrame(widestText + 10, counter * 16 + 0)
 end
+
 function ShowMyStatsAddon:MoveStatFrame()
     self.f:ClearAllPoints()
     self.f:SetPoint(
@@ -599,7 +704,32 @@ function ShowMyStatsAddon:MoveStatFrame()
         self.db.profile.position.y
     )
 end
+
 function ShowMyStatsAddon:ResizeStatFrame(width, height)
     self.f:SetWidth(width)
     self.f:SetHeight(height)
+end
+
+function ShowMyStatsAddon:UpdateStatFrameBackgroundTexture()
+    self.backgroundTexture:SetColorTexture(
+        self.db.profile.background.color.r,
+        self.db.profile.background.color.g,
+        self.db.profile.background.color.b
+    ); 
+    self.backgroundTexture:SetAlpha(self.db.profile.background.color.a);
+end
+
+
+
+
+
+
+
+
+
+
+-- HELPER FUNCTIONS
+
+function firstToUpper(str)
+    return (str:gsub("^%l", string.upper))
 end
