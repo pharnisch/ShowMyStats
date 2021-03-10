@@ -1,5 +1,9 @@
 local ShowMyStatsAddon = LibStub("AceAddon-3.0"):NewAddon("ShowMyStats", "AceConsole-3.0", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
+local LSM = LibStub("LibSharedMedia-3.0")
+--local AceGUISharedMediaWidgets = LibStub:GetLibrary("AceGUISharedMediaWidgets-1.0", true)
+
+
 
 local defaults = {
     profile = {
@@ -27,16 +31,18 @@ local defaults = {
         
             "absorb"
         },
-        orientation = {
-            vertical = "DOWN",
-            --horizontal = "RIGHT"
+        font = {
+            type = 1,
+            size = 16,
+            alignment = 3,
+            outline = 1,
         },
         background = {
             color = {
                 r = 0,
                 g = 0,
                 b = 0,
-                a = 0.25,
+                a = 0,
             },
         },
         position = {
@@ -101,6 +107,10 @@ function ShowMyStatsAddon:OnInitialize()
     self.configFrameShown = false
     self.text = {}
     self:CreateInterfaceOptionsFrame()
+    self.alignments = {"TOP", "TOPLEFT", "TOPRIGHT"}
+    self.alignment = self.alignments[self.db.profile.font.alignment]
+    self.outlines = {"OUTLINE", "THICKOUTLINE", "MONOCHROME", ""}
+    self.outline = self.outlines[self.db.profile.font.outline]
 
     self:RegisterEvent("UPDATE_SHAPESHIFT_FORM", "UpdateHandler")
     --self:RegisterEvent("UNIT_INVENTORY_CHANGED", "UpdateHandler")
@@ -223,7 +233,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
 
     local headingPosition = AceGUI:Create("Heading")
     headingPosition:SetWidth(500)
-    headingPosition:SetText("Please choose the desired position and colour of the stat frame.")
+    headingPosition:SetText("Frame Configuration")
     frame:AddChild(headingPosition)
 
 
@@ -234,7 +244,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         self:MoveStatFrame()
     end)
     sliderX:SetSliderValues(-1000, 1000, 1)
-    sliderX:SetLabel("x-Axis")
+    sliderX:SetLabel("Horizontal Position")
     frame:AddChild(sliderX)
 
     local sliderY = AceGUI:Create("Slider")
@@ -244,7 +254,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         self:MoveStatFrame()
     end)
     sliderY:SetSliderValues(-1000, 1000, 1)
-    sliderY:SetLabel("y-Axis")
+    sliderY:SetLabel("Vertical Position")
     frame:AddChild(sliderY)
 
     local dropdownAnchor = AceGUI:Create("Dropdown")
@@ -294,12 +304,59 @@ function ShowMyStatsAddon:ShowConfigFrame()
     end)
     frame:AddChild(colorPickerBackground)
 
+    ----------------------- FONT CONFIGS
+    local headingStats = AceGUI:Create("Heading")
+    headingStats:SetWidth(500)
+    headingStats:SetText("Font Configuration")
+    frame:AddChild(headingStats)
 
+    local sliderFontSize = AceGUI:Create("Slider")
+    sliderFontSize:SetValue(self.db.profile.font.size)
+    sliderFontSize:SetCallback("OnValueChanged", function(widget, event, value)
+        self.db.profile.font.size = value
+        self:UpdateStatFrame()
+    end)
+    sliderFontSize:SetSliderValues(4, 64, 1)
+    sliderFontSize:SetLabel("Font Size")
+    frame:AddChild(sliderFontSize)
+
+    local dropdownFont = AceGUI:Create("Dropdown")
+    dropdownFont:SetList(LSM:List(LSM.MediaType.FONT))
+    dropdownFont:SetCallback("OnValueChanged", function(widget, event, key)
+        self.db.profile.font.type = key
+        self.font = LSM:Fetch(LSM.MediaType.FONT, LSM:List(LSM.MediaType.FONT)[self.db.profile.font.type])
+        self:UpdateStatFrame()
+    end)
+    dropdownFont:SetValue(self.db.profile.font.type)
+    dropdownFont:SetLabel("Font")
+    frame:AddChild(dropdownFont)
+
+    local dropdownAlignment = AceGUI:Create("Dropdown")
+    dropdownAlignment:SetList({"Centered", "Left-Aligned", "Right-Aligned"})
+    dropdownAlignment:SetCallback("OnValueChanged", function(widget, event, key)
+        self.db.profile.font.alignment = key
+        self.alignment = self.alignments[key]
+        self:UpdateStatFrame()
+    end)
+    dropdownAlignment:SetValue(self.db.profile.font.alignment)
+    dropdownAlignment:SetLabel("Alignment")
+    frame:AddChild(dropdownAlignment)
+
+    local dropdownOutline = AceGUI:Create("Dropdown")
+    dropdownOutline:SetList({"Normal", "Thick", "Pixel-Font-Outline", "None"})
+    dropdownOutline:SetCallback("OnValueChanged", function(widget, event, key)
+        self.db.profile.font.outline = key
+        self.outline = self.outlines[key]
+        self:UpdateStatFrame()
+    end)
+    dropdownOutline:SetValue(self.db.profile.font.outline)
+    dropdownOutline:SetLabel("Outline")
+    frame:AddChild(dropdownOutline)
 
     ----------------------- STAT CONFIGS
     local headingStats = AceGUI:Create("Heading")
     headingStats:SetWidth(500)
-    headingStats:SetText("Modify which stats will be shown and in which colour.")
+    headingStats:SetText("Stat Configuration")
     frame:AddChild(headingStats)
 
     local scrollcontainer = AceGUI:Create("InlineGroup") -- best: SimpleGroup "InlineGroup" is also good
@@ -627,6 +684,7 @@ function ShowMyStatsAddon:ShowStatFrame()
 end
 
 function ShowMyStatsAddon:ConstructStatFrame()
+    self.font = LSM:Fetch(LSM.MediaType.FONT, LSM:List(LSM.MediaType.FONT)[self.db.profile.font.type])
     self.f = CreateFrame("Frame",nil,UIParent);
     --self.f:SetMovable(true)
     --self.f:EnableMouse(true)
@@ -638,11 +696,11 @@ function ShowMyStatsAddon:ConstructStatFrame()
     local counter = 0
     for statIndex, statName in ipairs(self.db.profile.stats) do
         self.text[statIndex] = self.f:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-        self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
-        --self.text[statIndex]:SetWidth(150)
-        self.text[statIndex]:SetHeight(16)
+        self.text[statIndex]:SetFont(self.font, self.db.profile.font.size, self.outline)
+        self.text[statIndex]:SetPoint(self.alignment, 0, (counter) * (-self.db.profile.font.size))
+        self.text[statIndex]:SetHeight(self.db.profile.font.size)
         --self.text[statIndex]:SetShadowColor(0,0,0)
-        --self.text[statIndex]:SetShadowOffset(2,2)
+        --self.text[statIndex]:SetShadowOffset(1,1)
         self.text[statIndex]:SetTextColor(
             self.db.profile[statName].color.r,
             self.db.profile[statName].color.g,
@@ -673,7 +731,10 @@ function ShowMyStatsAddon:UpdateStatFrame()
     local widestText = 0
     local counter = 0
     for statIndex, statName in ipairs(self.db.profile.stats) do
-        self.text[statIndex]:SetPoint("TOP", 0, (counter) * (-16))
+        self.text[statIndex]:SetFont(self.font, self.db.profile.font.size, self.outline)
+        self.text[statIndex]:ClearAllPoints()
+        self.text[statIndex]:SetPoint(self.alignment, 0, (counter) * (-self.db.profile.font.size))
+        self.text[statIndex]:SetHeight(self.db.profile.font.size)
         self.text[statIndex]:SetTextColor(
             self.db.profile[statName].color.r,
             self.db.profile[statName].color.g,
@@ -693,7 +754,7 @@ function ShowMyStatsAddon:UpdateStatFrame()
         end
     end
 
-    self:ResizeStatFrame(widestText + 10, counter * 16 + 0)
+    self:ResizeStatFrame(widestText + 0, counter * self.db.profile.font.size + 0)
 end
 
 function ShowMyStatsAddon:MoveStatFrame()
