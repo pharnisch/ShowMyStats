@@ -16,10 +16,11 @@ local defaults = {
             "crit",
             "haste",
             "mastery",
-            "versatility",
+            "versatilityDamage",
+            "versatilityDefense",
             "lifesteal",
             "avoidance",
-            --"speed",
+            "speed",
         
             "manaregen",
         
@@ -50,6 +51,27 @@ local defaults = {
             y = -250,
             anchor = 'TOP',
         },
+        strength = {
+            template = "{S}: {R}",
+        },
+        agility = {
+            template = "{S}: {R}",
+        },
+        intellect = {
+            template = "{S}: {R}",
+        },
+        stamina = {
+            template = "{S}: {R}",
+        },
+        absorb = {
+            template = "{S}: {R}",
+        },
+        stagger = {
+            template = "{S}: {P}%",
+        },
+        manaregen = {
+            template = "Mana Reg.: {R}",
+        },
         haste = {
             enabled = true,
             color = {
@@ -77,7 +99,7 @@ local defaults = {
                 a = 1,
             },
         },
-        versatility = {
+        versatilityOutput = {
             enabled = true,
             color = {
                 r = 0.2,
@@ -85,6 +107,7 @@ local defaults = {
                 b = 0.4,
                 a = 1,
             },
+            template = "Versatility: {P}% ({R})",
         },
         ['**'] = {
             enabled = false,
@@ -94,9 +117,26 @@ local defaults = {
                 b = 255/255,
                 a = 1,
             },
+            template = "{S}: {P}% ({R})",
         },
     }
 }
+
+
+function ShowMyStatsAddon:OnLoad()
+    if BackdropTemplateMixin then
+        Mixin(self, BackdropTemplateMixin)
+    end
+
+    self:SetBackdrop({
+        bgFile = "Interface\\TutorialFrame\\TutorialFrameBackground",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true,
+        tileSize = 32,
+        edgeSize = 16,
+        insets = {left = 5, right = 5, top = 5, bottom = 5},
+    })
+end
 
 function ShowMyStatsAddon:OnInitialize()
     -- Code that you want to run when the addon is first loaded goes here.
@@ -192,6 +232,7 @@ LibStub("AceConfig-3.0"):RegisterOptionsTable("ShowMyStats", options, {"sms", "s
 
 function ShowMyStatsAddon:CreateInterfaceOptionsFrame()
     local frame = CreateFrame("Frame", "ShowMyStats", UIParent);
+    --frame:SetHeight(500)
     frame.name = "ShowMyStats"
     InterfaceOptions_AddCategory(frame)
 
@@ -257,7 +298,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
     sliderY:SetLabel("Vertical Position")
     frame:AddChild(sliderY)
 
-    local dropdownAnchor = AceGUI:Create("Dropdown")
+    local dropdownAnchor = AceGUI:Create("Dropdown", BackdropTemplateMixin and "BackdropTemplate")
     --dropdownAnchor:SetWidth(250)
     dropdownAnchor:SetList({
         TOP = "Top",
@@ -278,7 +319,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
     dropdownAnchor:SetLabel("Anchor")
     frame:AddChild(dropdownAnchor)
 
-    local colorPickerBackground = AceGUI:Create("ColorPicker")
+    local colorPickerBackground = AceGUI:Create("ColorPicker", BackdropTemplateMixin and "BackdropTemplate")
     colorPickerBackground:SetHasAlpha(true)
     colorPickerBackground:SetLabel("Background colour")
     --colorPickerBackground:SetWidth(250)
@@ -305,12 +346,12 @@ function ShowMyStatsAddon:ShowConfigFrame()
     frame:AddChild(colorPickerBackground)
 
     ----------------------- FONT CONFIGS
-    local headingStats = AceGUI:Create("Heading")
+    local headingStats = AceGUI:Create("Heading", BackdropTemplateMixin and "BackdropTemplate")
     headingStats:SetWidth(500)
     headingStats:SetText("Font Configuration")
     frame:AddChild(headingStats)
 
-    local sliderFontSize = AceGUI:Create("Slider")
+    local sliderFontSize = AceGUI:Create("Slider", BackdropTemplateMixin and "BackdropTemplate")
     sliderFontSize:SetValue(self.db.profile.font.size)
     sliderFontSize:SetCallback("OnValueChanged", function(widget, event, value)
         self.db.profile.font.size = value
@@ -320,7 +361,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
     sliderFontSize:SetLabel("Font Size")
     frame:AddChild(sliderFontSize)
 
-    local dropdownFont = AceGUI:Create("Dropdown")
+    local dropdownFont = AceGUI:Create("Dropdown", BackdropTemplateMixin and "BackdropTemplate")
     dropdownFont:SetList(LSM:List(LSM.MediaType.FONT))
     dropdownFont:SetCallback("OnValueChanged", function(widget, event, key)
         self.db.profile.font.type = key
@@ -331,7 +372,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
     dropdownFont:SetLabel("Font")
     frame:AddChild(dropdownFont)
 
-    local dropdownAlignment = AceGUI:Create("Dropdown")
+    local dropdownAlignment = AceGUI:Create("Dropdown", BackdropTemplateMixin and "BackdropTemplate")
     dropdownAlignment:SetList({"Centered", "Left-Aligned", "Right-Aligned"})
     dropdownAlignment:SetCallback("OnValueChanged", function(widget, event, key)
         self.db.profile.font.alignment = key
@@ -342,7 +383,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
     dropdownAlignment:SetLabel("Alignment")
     frame:AddChild(dropdownAlignment)
 
-    local dropdownOutline = AceGUI:Create("Dropdown")
+    local dropdownOutline = AceGUI:Create("Dropdown", BackdropTemplateMixin and "BackdropTemplate")
     dropdownOutline:SetList({"Normal", "Thick", "Pixel-Font-Outline", "None"})
     dropdownOutline:SetCallback("OnValueChanged", function(widget, event, key)
         self.db.profile.font.outline = key
@@ -354,26 +395,33 @@ function ShowMyStatsAddon:ShowConfigFrame()
     frame:AddChild(dropdownOutline)
 
     ----------------------- STAT CONFIGS
-    local headingStats = AceGUI:Create("Heading")
+    local headingStats = AceGUI:Create("Heading", BackdropTemplateMixin and "BackdropTemplate")
     headingStats:SetWidth(500)
     headingStats:SetText("Stat Configuration")
     frame:AddChild(headingStats)
 
-    local scrollcontainer = AceGUI:Create("InlineGroup") -- best: SimpleGroup "InlineGroup" is also good
+    local scrollcontainer = AceGUI:Create("InlineGroup", BackdropTemplateMixin and "BackdropTemplate") -- best: SimpleGroup "InlineGroup" is also good
     scrollcontainer:SetFullWidth(true)
     scrollcontainer:SetFullHeight(true) -- probably?
     scrollcontainer:SetLayout("Fill") -- important!
     frame:AddChild(scrollcontainer)
-    local scroll = AceGUI:Create("ScrollFrame")
+    local scroll = AceGUI:Create("ScrollFrame", BackdropTemplateMixin and "BackdropTemplate")
     scroll:SetLayout("Flow") -- probably?
     scrollcontainer:AddChild(scroll)
 
 
 
     for statIndex, statName in ipairs(self.db.profile.stats) do
+        --firstToUpper(statName) .. "
+        local statLabel = AceGUI:Create("Label")
+        statLabel:SetText(firstToUpper(statName))
+        statLabel:SetWidth(100)
+        --statLabel:SetFont()
+        scroll:AddChild(statLabel)
+
         local checkbox = AceGUI:Create("CheckBox")
-        checkbox:SetLabel(firstToUpper(statName) .. " enabled")
-        checkbox:SetWidth(200)
+        checkbox:SetLabel("enabled")
+        checkbox:SetWidth(100)
         checkbox:SetValue(self.db.profile[statName].enabled)
         checkbox:SetCallback("OnValueChanged", function(widget, event, value)
             self.db.profile[statName].enabled = value
@@ -381,9 +429,19 @@ function ShowMyStatsAddon:ShowConfigFrame()
         end)
         scroll:AddChild(checkbox)
 
+        local editBox = AceGUI:Create("EditBox")
+        editBox:SetLabel("template")
+        editBox:SetWidth(250)
+        editBox:SetText(self.db.profile[statName].template)
+        editBox:SetCallback("OnTextChanged", function(widget, event, value)
+            self.db.profile[statName].template = value
+            self:UpdateStatFrame()
+        end)
+        scroll:AddChild(editBox)
+
         local colorPicker = AceGUI:Create("ColorPicker")
-        colorPicker:SetLabel(firstToUpper(statName) .. " colour")
-        colorPicker:SetWidth(200)
+        colorPicker:SetLabel("colour") --firstToUpper(statName) .. " colour")
+        colorPicker:SetWidth(100)
         colorPicker:SetColor(
             self.db.profile[statName].color.r, 
             self.db.profile[statName].color.g,
@@ -417,7 +475,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         scroll:AddChild(buttonDown) ]]
 
         iconSize = 20
-        iconPadding = 2
+        iconPadding = 3
         local iconUp = AceGUI:Create("Icon")
         
         iconUp:SetImageSize(iconSize, iconSize)
@@ -469,9 +527,47 @@ end
 
 
 
+--CR_UNUSED_1 = 1;
+--CR_DEFENSE_SKILL = 2;
+--CR_DODGE = 3;
+--CR_PARRY = 4;
+--CR_BLOCK = 5;
+--CR_HIT_MELEE = 6;
+--CR_HIT_RANGED = 7;
+--CR_HIT_SPELL = 8;
+--CR_CRIT_MELEE = 9;
+--CR_CRIT_RANGED = 10;
+--CR_CRIT_SPELL = 11;
+--CR_CORRUPTION = 12;
+--CR_CORRUPTION_RESISTANCE = 13;
+--CR_SPEED = 14;
+--COMBAT_RATING_RESILIENCE_CRIT_TAKEN = 15;
+--COMBAT_RATING_RESILIENCE_PLAYER_DAMAGE_TAKEN = 16;
+--CR_LIFESTEAL = 17;
+--CR_HASTE_MELEE = 18;
+--CR_HASTE_RANGED = 19;
+--CR_HASTE_SPELL = 20;
+--CR_AVOIDANCE = 21;
+--CR_UNUSED_2 = 22;
+--CR_WEAPON_SKILL_RANGED = 23;
+--CR_EXPERTISE = 24;
+--CR_ARMOR_PENETRATION = 25;
+--CR_MASTERY = 26;
+--CR_UNUSED_3 = 27;
+--CR_UNUSED_4 = 28;
+--CR_VERSATILITY_DAMAGE_DONE = 29;
+--CR_VERSATILITY_DAMAGE_TAKEN = 31;
 
 
-
+function ShowMyStatsAddon:FillTemplate(statName, percentage, rating)
+    if (percentage ~= "") then
+        percentage = string.format("%.0f", percentage)
+    end
+    if (rating ~= "") then
+        rating = string.format("%.0f", rating)
+    end
+    return self.db.profile[statName].template:gsub("%{S}", firstToUpper(statName)):gsub("%{P}", percentage):gsub("%{R}", rating)
+end
 
 
 
@@ -485,18 +581,21 @@ local mainStatIndex = {
 }
 function ShowMyStatsAddon:GetMainStatInfo(mainStatName)
     local base, stat, posBuff, negBuff = UnitStat("player", mainStatIndex[mainStatName])
-    return firstToUpper(mainStatName) .. ": " .. stat
+    --return firstToUpper(mainStatName) .. ": " .. stat
+    return self:FillTemplate(mainStatName, "", stat)
 end
 
-function ShowMyStatsAddon:GetMasteryInfo()
+function ShowMyStatsAddon:GetMasteryInfo(statName)
     local masteryeffect, coefficient = GetMasteryEffect() -- mastery*coefficient=masteryeffect
-    local mastery = GetMastery() -- pure value 
-    return "Mastery: " .. string.format("%.0f%%", masteryeffect)
+    local mastery = GetCombatRating(CR_MASTERY) --GetMastery() -- pure value
+    --masteryeffect = string.format("%.0f", masteryeffect)
+    return self:FillTemplate(statName, masteryeffect, mastery)
 end
 
-function ShowMyStatsAddon:GetCritInfo()
+function ShowMyStatsAddon:GetCritInfo(statName)
 	local spellCrit, rangedCrit, meleeCrit;
 	local critChance;
+	local critRatingID;
 	-- Start at 2 to skip physical damage
 	local holySchool = 2;
 	local minCrit = GetSpellCritChance(holySchool);
@@ -505,86 +604,148 @@ function ShowMyStatsAddon:GetCritInfo()
 		spellCrit = GetSpellCritChance(i);
 		minCrit = min(minCrit, spellCrit);
 	end
+
+
 	spellCrit = minCrit
 	rangedCrit = GetRangedCritChance();
 	meleeCrit = GetCritChance();
 	if (spellCrit >= rangedCrit and spellCrit >= meleeCrit) then
 		critChance = spellCrit;
+		critRatingID = CR_CRIT_SPELL;
 	elseif (rangedCrit >= meleeCrit) then
 		critChance = rangedCrit;
+		critRatingID = CR_CRIT_RANGED;
 	else
 		critChance = meleeCrit;
+		critRatingID = CR_CRIT_MELEE;
 	end
-    return "Crit: " .. string.format("%.0f%%", critChance)
+
+	local critRating = GetCombatRating(critRatingID)
+
+    return self:FillTemplate(statName, critChance, critRating)
 end
 
-function ShowMyStatsAddon:GetHasteInfo()
+function ShowMyStatsAddon:GetHasteInfo(statName)
     local haste = GetHaste()
-    return "Haste: " .. string.format("%.0f%%", haste)
+    local haste_rating_melee = GetCombatRating(CR_HASTE_MELEE)
+    local haste_rating_ranged = GetCombatRating(CR_HASTE_RANGED)
+    local haste_rating_spell = GetCombatRating(CR_HASTE_SPELL)
+    local haste_rating = 0
+    if (haste_rating_melee > haste_rating) then
+        haste_rating = haste_rating_melee
+    elseif (haste_rating_ranged > haste_rating) then
+        haste_rating = haste_rating_ranged
+    elseif (haste_rating_spell > haste_rating) then
+        haste_rating = haste_rating_spell
+    end
+    return self:FillTemplate(statName, haste, haste_rating)
 end
 
-function ShowMyStatsAddon:GetVersatilityInfo()
+function ShowMyStatsAddon:GetVersatilityDamageInfo(statName)
     local versatilityDamageBonus = GetCombatRatingBonus(29) + GetVersatilityBonus(29);
+    local versatilityDamageBonusRating = GetCombatRating(29)
+    return self:FillTemplate(statName, versatilityDamageBonus, versatilityDamageBonusRating)
+end
+
+function ShowMyStatsAddon:GetVersatilityDamageReductionInfo(statName)
 	local versatilityDamageTakenReduction = GetCombatRatingBonus(31) + GetVersatilityBonus(31);
-    return string.format("Versatility: %.0f%%", versatilityDamageBonus)
+	local versatilityDamageTakenReductionRating = GetCombatRating(31)
+    return self:FillTemplate(statName, versatilityDamageTakenReduction, versatilityDamageTakenReductionRating)
 end
 
-function ShowMyStatsAddon:GetAbsorbInfo()
+function ShowMyStatsAddon:GetAbsorbInfo(statName)
     local absorb = UnitGetTotalAbsorbs("player")
-    return string.format("Absorb: %d", absorb)
+    --return string.format("Absorb: %d", absorb)
+    return self:FillTemplate(statName, "", absorb)
 end
 
-function ShowMyStatsAddon:GetSpeedInfo()
-    local currentSpeed, runningSpeed, flightSpeed, swimSpeed = GetUnitSpeed("player")
-    local maxSpeed = max(currentSpeed, runningSpeed, flightSpeed, swimSpeed)
-    maxSpeed = maxSpeed - BASE_MOVEMENT_SPEED
-    maxSpeed = (maxSpeed / 7) * 100
-    return string.format("Speed: %.0f%%", maxSpeed)
+function ShowMyStatsAddon:GetSpeedInfo(statName)
+    --local currentSpeed, runningSpeed, flightSpeed, swimSpeed = GetUnitSpeed("player")
+    --local maxSpeed = max(currentSpeed, runningSpeed, flightSpeed, swimSpeed)
+    --maxSpeed = maxSpeed - BASE_MOVEMENT_SPEED
+    --maxSpeed = (maxSpeed / 7) * 100
+    --return string.format("Speed: %.0f%%", maxSpeed)
+
+    local unit = "player";
+	local _, runSpeed, flightSpeed, swimSpeed = GetUnitSpeed(unit);
+	runSpeed = runSpeed/BASE_MOVEMENT_SPEED*100;
+	flightSpeed = flightSpeed/BASE_MOVEMENT_SPEED*100;
+	swimSpeed = swimSpeed/BASE_MOVEMENT_SPEED*100;
+	-- Pets seem to always actually use run speed
+	if (unit == "pet") then
+		swimSpeed = runSpeed;
+	end
+	-- Determine whether to display running, flying, or swimming speed
+	local speed = runSpeed;
+	if (IsSwimming()) then
+		speed = swimSpeed;
+	elseif (IsFlying()) then
+		speed = flightSpeed;
+	end
+	-- Hack so that your speed doesn't appear to change when jumping out of the water
+	--if (IsFalling()) then
+	--	if (statFrame.wasSwimming) then
+	--		speed = swimSpeed;
+	--	end
+	--else
+	--	statFrame.wasSwimming = swimming;
+	--end
+	local speed_p = format("%d", speed+0.5);
+	local speed_r = speed
+	return self:FillTemplate(statName, speed_p, speed_r)
 end
 
-function ShowMyStatsAddon:GetArmorInfo()
+function ShowMyStatsAddon:GetArmorInfo(statName)
     local base, effectiveArmor, armor, posBuff, negBuff = UnitArmor("player");
     local armorReduction = PaperDollFrame_GetArmorReduction(effectiveArmor, UnitEffectiveLevel("player"));
-    return string.format("Armor: %d (%.0f%%)", effectiveArmor, armorReduction)
+    --return string.format("Armor: %d (%.0f%%)", effectiveArmor, armorReduction)
+    return self:FillTemplate(statName, armorReduction, effectiveArmor)
 end
 
-function ShowMyStatsAddon:GetStaggerInfo()
+function ShowMyStatsAddon:GetStaggerInfo(statName)
     local stagger, staggerAgainstTarget = C_PaperDollInfo.GetStaggerPercentage("player");
-    return string.format("Stagger: %.0f%%", stagger)
+    --return string.format("Stagger: %.0f%%", stagger)
+    return self:FillTemplate(statName, stagger, "")
 end
 
-function ShowMyStatsAddon:GetDodgeInfo()
+function ShowMyStatsAddon:GetDodgeInfo(statName)
     local chance = GetDodgeChance()
-    return string.format("Dodge: %.0f%%", chance)
+    --return string.format("Dodge: %.0f%%", chance)
+    return self:FillTemplate(statName, chance, GetCombatRating(CR_DODGE))
 end
 
-function ShowMyStatsAddon:GetBlockInfo()
+function ShowMyStatsAddon:GetBlockInfo(statName)
     local chance = GetBlockChance()
-    return string.format("Block: %.0f%%", chance)
+    --return string.format("Block: %.0f%%", chance)
+    return self:FillTemplate(statName, chance, GetCombatRating(CR_BLOCK))
 end
 
-function ShowMyStatsAddon:GetParryInfo()
+function ShowMyStatsAddon:GetParryInfo(statName)
     local chance = GetParryChance()
-    return string.format("Parry: %.0f%%", chance)
+    --return string.format("Parry: %.0f%%", chance)
+    return self:FillTemplate(statName, chance, GetCombatRating(CR_PARRY))
 end
 
-function ShowMyStatsAddon:GetManaRegenInfo()
+function ShowMyStatsAddon:GetManaRegenInfo(statName)
 	local base, combat = GetManaRegen();
 	-- All mana regen stats are displayed as mana/5 sec.
 	--base = floor(base * 5.0);
 	--combat = floor(combat * 5.0);
     -- Combat mana regen is most important to the player, so we display it as the main value
-    return string.format("Mana per second: %.0f", combat)
+    --return string.format("Mana per second: %.0f", combat)
+    return self:FillTemplate(statName, "", combat)
 end
 
-function ShowMyStatsAddon:GetLifeStealInfo()
+function ShowMyStatsAddon:GetLifeStealInfo(statName)
     local lifesteal = GetLifesteal();
-    return string.format("Lifesteal: %.0f%%", lifesteal)
+    --return string.format("Lifesteal: %.0f%%", lifesteal)
+    return self:FillTemplate(statName, lifesteal, GetCombatRating(CR_LIFESTEAL))
 end
 
-function ShowMyStatsAddon:GetAvoidanceInfo()
+function ShowMyStatsAddon:GetAvoidanceInfo(statName)
     local avoidance = GetAvoidance();
-    return string.format("Avoidance: %.0f%%", avoidance)
+    --return string.format("Avoidance: %.0f%%", avoidance)
+    return self:FillTemplate(statName, avoidance, GetCombatRating(CR_AVOIDANCE))
 end
 
 function ShowMyStatsAddon:GetStatInfo(statName)
@@ -597,33 +758,35 @@ function ShowMyStatsAddon:GetStatInfo(statName)
     elseif statName == "intellect" then
         return self:GetMainStatInfo("intellect")
     elseif statName == "mastery" then
-        return self:GetMasteryInfo()
+        return self:GetMasteryInfo(statName)
     elseif statName == "haste" then
-        return self:GetHasteInfo()
+        return self:GetHasteInfo(statName)
     elseif statName == "crit" then
-        return self:GetCritInfo()
-    elseif statName == "versatility" then
-        return self:GetVersatilityInfo()
+        return self:GetCritInfo(statName)
+    elseif statName == "versatilityOutput" then
+        return self:GetVersatilityDamageInfo(statName)
+    elseif statName == "versatilityDefense" then
+        return self:GetVersatilityDamageReductionInfo(statName)
     elseif statName == "absorb" then
-        return self:GetAbsorbInfo()
+        return self:GetAbsorbInfo(statName)
     elseif statName == "speed" then
-        return self:GetSpeedInfo()
+        return self:GetSpeedInfo(statName)
     elseif statName == "armor" then
-        return self:GetArmorInfo()
+        return self:GetArmorInfo(statName)
     elseif statName == "stagger" then
-        return self:GetStaggerInfo()
+        return self:GetStaggerInfo(statName)
     elseif statName == "dodge" then
-        return self:GetDodgeInfo()
+        return self:GetDodgeInfo(statName)
     elseif statName == "block" then
-        return self:GetBlockInfo()
+        return self:GetBlockInfo(statName)
     elseif statName == "parry" then
-        return self:GetParryInfo()
+        return self:GetParryInfo(statName)
     elseif statName == "manaregen" then
-        return self:GetManaRegenInfo()
+        return self:GetManaRegenInfo(statName)
     elseif statName == "lifesteal" then
-        return self:GetLifeStealInfo()
+        return self:GetLifeStealInfo(statName)
     elseif statName == "avoidance" then
-        return self:GetAvoidanceInfo()
+        return self:GetAvoidanceInfo(statName)
     end
 end
 
