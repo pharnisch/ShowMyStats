@@ -16,7 +16,7 @@ local defaults = {
             "crit",
             "haste",
             "mastery",
-            "versatilityDamage",
+            "versatilityOutput",
             "versatilityDefense",
             "lifesteal",
             "avoidance",
@@ -72,6 +72,9 @@ local defaults = {
         manaregen = {
             template = "Mana Reg.: {R}",
         },
+        versatilityDefense = {
+            template = "Versatility (Def.): {P}%",
+        },
         haste = {
             enabled = true,
             color = {
@@ -117,7 +120,7 @@ local defaults = {
                 b = 255/255,
                 a = 1,
             },
-            template = "{S}: {P}% ({R})",
+            template = "{S}: {P}%",
         },
     }
 }
