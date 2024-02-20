@@ -110,7 +110,7 @@ local defaults = {
                 b = 0.4,
                 a = 1,
             },
-            template = "Versatility: {P}% ({R})",
+            template = "Versatility: {P}%",
         },
         ['**'] = {
             enabled = false,
