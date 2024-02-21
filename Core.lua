@@ -4,6 +4,31 @@ local LSM = LibStub("LibSharedMedia-3.0")
 --local AceGUISharedMediaWidgets = LibStub:GetLibrary("AceGUISharedMediaWidgets-1.0", true)
 
 
+local statID_to_description = {
+    strength = "Strength",
+    agility = "Agility",
+    intellect = "Intellect",
+    stamina = "Stamina",
+
+    crit = "Critical",
+    haste = "Haste",
+    mastery = "Mastery",
+    versatilityOutput = "Versatility",
+    versatilityDefense = "Versatility (Def.)",
+    lifesteal = "Lifesteal",
+    avoidance = "Avoidance",
+    speed = "Speed",
+
+    manaregen = "Mana Reg.",
+
+    armor = "Armor",
+    dodge = "Dodge",
+    parry = "Parry",
+    block = "Block",
+    stagger = "Stagger",
+
+    absorb = "Absorption "
+}
 
 local defaults = {
     profile = {
@@ -12,7 +37,7 @@ local defaults = {
             "agility",
             "intellect",
             "stamina",
-        
+
             "crit",
             "haste",
             "mastery",
@@ -21,15 +46,15 @@ local defaults = {
             "lifesteal",
             "avoidance",
             "speed",
-        
+
             "manaregen",
-        
+
             "armor",
             "dodge",
             "parry",
             "block",
             "stagger",
-        
+
             "absorb"
         },
         font = {
@@ -67,13 +92,13 @@ local defaults = {
             template = "{S}: {R}",
         },
         stagger = {
-            template = "{S}: {P}%",
+            --template = "{S}: {P}%",
         },
         manaregen = {
-            template = "Mana Reg.: {R}",
+            template = "{S}: {R}",
         },
         versatilityDefense = {
-            template = "Versatility (Def.): {P}%",
+            --template = "Versatility (Def.): {P}%",
         },
         haste = {
             enabled = true,
@@ -110,7 +135,7 @@ local defaults = {
                 b = 0.4,
                 a = 1,
             },
-            template = "Versatility: {P}%",
+            --template = "Versatility: {P}%",
         },
         ['**'] = {
             enabled = false,
@@ -143,7 +168,12 @@ end
 
 function ShowMyStatsAddon:OnInitialize()
     -- Code that you want to run when the addon is first loaded goes here.
-    self.db = LibStub("AceDB-3.0"):New("ShowMyStatsDB", defaults)
+    local defaultProfile = true
+    self.db = LibStub("AceDB-3.0"):New("ShowMyStatsDB", defaults, defaultProfile)
+    print(self.db:GetCurrentProfile())
+    for k,v in pairs(self.db:GetProfiles()) do
+      print(k,v)
+    end
     self.db.RegisterCallback(self, "OnProfileChanged", "RefreshConfig")
     self.db.RegisterCallback(self, "OnProfileCopied", "RefreshConfig")
     self.db.RegisterCallback(self, "OnProfileReset", "RefreshConfig")
@@ -257,6 +287,13 @@ function ShowMyStatsAddon:CreateInterfaceOptionsFrame()
     --frame:AddChild(button)
 end
 
+
+function ShowMyStatsAddon:UpdateConfigFrame()
+    self.configFrameShown = false
+    self.configFrame:Release()
+    self:ShowConfigFrame()
+end
+
 ShowMyStatsAddon:RegisterChatCommand("sms", "ShowConfigFrame")
 ShowMyStatsAddon:RegisterChatCommand("showmystats", "ShowConfigFrame")
 function ShowMyStatsAddon:ShowConfigFrame()
@@ -267,16 +304,104 @@ function ShowMyStatsAddon:ShowConfigFrame()
 
     local frame = AceGUI:Create("Frame")
     self.configFrame = frame
+    frame:SetWidth(900)
+    frame:SetHeight(600)
     frame:SetTitle("ShowMyStats")
     frame:SetStatusText("ShowMyStats Configuration Panel")
-    frame:SetCallback("OnClose", function(widget) 
+    frame:SetCallback("OnClose", function(widget)
         self.configFrameShown = false
-        AceGUI:Release(widget) 
+        AceGUI:Release(widget)
     end)
     frame:SetLayout("Flow") -- List/FLow/Fill
 
+
+    -- CHANGING PROFILES
+
     local headingPosition = AceGUI:Create("Heading")
-    headingPosition:SetWidth(500)
+    headingPosition:SetWidth(850)
+    headingPosition:SetText("Profiles")
+    frame:AddChild(headingPosition)
+
+    local dropdownProfiles = AceGUI:Create("Dropdown", BackdropTemplateMixin and "BackdropTemplate")
+    dropdownProfiles:SetWidth(250)
+    dropdownProfiles:SetList(self.db:GetProfiles())
+    dropdownProfiles:SetCallback("OnValueChanged", function(widget, event, key)
+        self.db:SetProfile(self.db:GetProfiles()[key])
+        self:MoveStatFrame()
+        self:UpdateStatFrame()
+        self:UpdateConfigFrame()
+    end)
+    local index={}
+    for k,v in pairs(self.db:GetProfiles()) do
+       index[v]=k
+    end
+    local currentProfileIndex = index[self.db:GetCurrentProfile()]
+    dropdownProfiles:SetValue(currentProfileIndex)
+    dropdownProfiles:SetLabel("Select Profile For Character")
+    frame:AddChild(dropdownProfiles)
+
+
+    local addProfile = AceGUI:Create("EditBox")
+    addProfile:SetLabel("Add New Profile (with Default Settings)")
+    addProfile:SetWidth(250)
+    addProfile:SetText("")
+    addProfile:SetCallback("OnEnterPressed", function(widget, event, value)
+        self.db:SetProfile(value)
+        self:MoveStatFrame()
+        self:UpdateStatFrame()
+        self:UpdateConfigFrame()
+    end)
+    frame:AddChild(addProfile)
+
+    --    self.db:ResetProfile()
+
+    -- CREATE NEW PROFILE THAT GETS OVERWRITTEN BY CURRENTLY SELECTED PROFILE
+    local addCopiedProfile = AceGUI:Create("EditBox")
+    addCopiedProfile:SetLabel("Add New Profile (Copy Settings from Selected)")
+    addCopiedProfile:SetWidth(250)
+    addCopiedProfile:SetText("")
+    addCopiedProfile:SetCallback("OnEnterPressed", function(widget, event, value)
+        local previouslySelectedProfile = self.db:GetCurrentProfile()
+        self.db:SetProfile(value) -- creating new profile
+        self.db:CopyProfile(previouslySelectedProfile) -- init new profile with settings from previouslySelectedProfile
+        self:MoveStatFrame()
+        self:UpdateStatFrame()
+        self:UpdateConfigFrame()
+    end)
+    frame:AddChild(addCopiedProfile)
+
+
+    -- OVERWRITE CURRENT PROFILE BY SELECTED PROFILE SETTINGS
+    --local dropdownCopyProfiles = AceGUI:Create("Dropdown", BackdropTemplateMixin and "BackdropTemplate")
+    --dropdownCopyProfiles:SetWidth(250)
+    --dropdownCopyProfiles:SetList(self.db:GetProfiles())
+    --dropdownCopyProfiles:SetCallback("OnValueChanged", function(widget, event, key)
+    --    self.db:CopyProfile(self.db:GetProfiles()[key])  -- copies profile settings into current profile
+    --    self:MoveStatFrame()
+    --    self:UpdateStatFrame()
+    --    self:UpdateConfigFrame()
+    --end)
+    --dropdownCopyProfiles:SetLabel("OVERWRITE current profile by another profile's settings")
+    --frame:AddChild(dropdownCopyProfiles)
+
+    --local buttonAddProfile = AceGUI:Create("Button")
+    --buttonAddProfile:SetText("New Profile")
+    --buttonAddProfile:SetWidth(100)
+    --buttonAddProfile:SetCallback("OnClick", function(widget, event, test)
+    --    local tmp = self.db.profile.stats[statIndex]
+    --    self.db.profile.stats[statIndex] = self.db.profile.stats[statIndex - 1]
+    --    self.db.profile.stats[statIndex - 1] = tmp
+    --    self.configFrameShown = false
+    --    self.configFrame:Release()
+    --    self:ShowConfigFrame()
+    --    self:UpdateStatFrame()
+    --end)
+    --frame:AddChild(buttonAddProfile)
+
+    -- FRAME CONFIGURATION
+
+    local headingPosition = AceGUI:Create("Heading")
+    headingPosition:SetWidth(850)
     headingPosition:SetText("Frame Configuration")
     frame:AddChild(headingPosition)
 
@@ -327,7 +452,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
     colorPickerBackground:SetLabel("Background colour")
     --colorPickerBackground:SetWidth(250)
     colorPickerBackground:SetColor(
-        self.db.profile.background.color.r, 
+        self.db.profile.background.color.r,
         self.db.profile.background.color.g,
         self.db.profile.background.color.b,
         self.db.profile.background.color.a
@@ -350,8 +475,8 @@ function ShowMyStatsAddon:ShowConfigFrame()
 
     ----------------------- FONT CONFIGS
     local headingStats = AceGUI:Create("Heading", BackdropTemplateMixin and "BackdropTemplate")
-    headingStats:SetWidth(500)
-    headingStats:SetText("Font Configuration")
+    headingStats:SetWidth(850)
+    headingStats:SetText("Text Configuration")
     frame:AddChild(headingStats)
 
     local sliderFontSize = AceGUI:Create("Slider", BackdropTemplateMixin and "BackdropTemplate")
@@ -368,6 +493,11 @@ function ShowMyStatsAddon:ShowConfigFrame()
     dropdownFont:SetList(LSM:List(LSM.MediaType.FONT))
     dropdownFont:SetCallback("OnValueChanged", function(widget, event, key)
         self.db.profile.font.type = key
+        -- some redundancy here seems to improve the rate in which the font is actually loaded in time
+        self.font = LSM:Fetch(LSM.MediaType.FONT, LSM:List(LSM.MediaType.FONT)[self.db.profile.font.type])
+        self.font = LSM:Fetch(LSM.MediaType.FONT, LSM:List(LSM.MediaType.FONT)[self.db.profile.font.type])
+        self.font = LSM:Fetch(LSM.MediaType.FONT, LSM:List(LSM.MediaType.FONT)[self.db.profile.font.type])
+        self.font = LSM:Fetch(LSM.MediaType.FONT, LSM:List(LSM.MediaType.FONT)[self.db.profile.font.type])
         self.font = LSM:Fetch(LSM.MediaType.FONT, LSM:List(LSM.MediaType.FONT)[self.db.profile.font.type])
         self:UpdateStatFrame()
     end)
@@ -399,12 +529,13 @@ function ShowMyStatsAddon:ShowConfigFrame()
 
     ----------------------- STAT CONFIGS
     local headingStats = AceGUI:Create("Heading", BackdropTemplateMixin and "BackdropTemplate")
-    headingStats:SetWidth(500)
+    headingStats:SetWidth(650)
     headingStats:SetText("Stat Configuration")
     frame:AddChild(headingStats)
 
     local scrollcontainer = AceGUI:Create("InlineGroup", BackdropTemplateMixin and "BackdropTemplate") -- best: SimpleGroup "InlineGroup" is also good
-    scrollcontainer:SetFullWidth(true)
+    --scrollcontainer:SetFullWidth(true)
+    scrollcontainer:SetWidth(650)
     scrollcontainer:SetFullHeight(true) -- probably?
     scrollcontainer:SetLayout("Fill") -- important!
     frame:AddChild(scrollcontainer)
@@ -433,7 +564,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         scroll:AddChild(checkbox)
 
         local editBox = AceGUI:Create("EditBox")
-        editBox:SetLabel("template")
+        editBox:SetLabel("Template")
         editBox:SetWidth(250)
         editBox:SetText(self.db.profile[statName].template)
         editBox:SetCallback("OnTextChanged", function(widget, event, value)
@@ -446,7 +577,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         colorPicker:SetLabel("colour") --firstToUpper(statName) .. " colour")
         colorPicker:SetWidth(100)
         colorPicker:SetColor(
-            self.db.profile[statName].color.r, 
+            self.db.profile[statName].color.r,
             self.db.profile[statName].color.g,
             self.db.profile[statName].color.b,
             self.db.profile[statName].color.a
@@ -467,7 +598,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         end)
         scroll:AddChild(colorPicker)
 
---[[    local buttonUp = AceGUI:Create("Button") -- alternative: Icon 
+--[[    local buttonUp = AceGUI:Create("Button") -- alternative: Icon
         buttonUp:SetWidth(80)
         buttonUp:SetText("Up")
         scroll:AddChild(buttonUp)
@@ -480,7 +611,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         iconSize = 20
         iconPadding = 3
         local iconUp = AceGUI:Create("Icon")
-        
+
         iconUp:SetImageSize(iconSize, iconSize)
         iconUp:SetWidth(iconSize + iconPadding * 2)
 
@@ -490,9 +621,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
                 local tmp = self.db.profile.stats[statIndex]
                 self.db.profile.stats[statIndex] = self.db.profile.stats[statIndex - 1]
                 self.db.profile.stats[statIndex - 1] = tmp
-                self.configFrameShown = false
-                self.configFrame:Release()
-                self:ShowConfigFrame()
+                self:UpdateConfigFrame()
                 self:UpdateStatFrame()
             end)
         else
@@ -501,7 +630,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         scroll:AddChild(iconUp)
 
         local iconDown = AceGUI:Create("Icon")
-            
+
             iconDown:SetImageSize(iconSize, iconSize)
             iconDown:SetWidth(iconSize + iconPadding * 2)
         if statIndex ~= table.getn(self.db.profile.stats) then
@@ -510,9 +639,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
                 local tmp = self.db.profile.stats[statIndex]
                 self.db.profile.stats[statIndex] = self.db.profile.stats[statIndex + 1]
                 self.db.profile.stats[statIndex + 1] = tmp
-                self.configFrameShown = false
-                self.configFrame:Release()
-                self:ShowConfigFrame()
+                self:UpdateConfigFrame()
                 self:UpdateStatFrame()
             end)
         else
@@ -524,7 +651,10 @@ end
 
 -- HOW TO HANDLE USER PROFILES AND WHAT KIND OF CONFIG TO REFRESH?
 function ShowMyStatsAddon:RefreshConfig()
-    --self:Print("refresh config")
+    self.alignment = self.alignments[self.db.profile.font.alignment]
+    self.outline = self.outlines[self.db.profile.font.outline]
+    self.font = LSM:Fetch(LSM.MediaType.FONT, LSM:List(LSM.MediaType.FONT)[self.db.profile.font.type])
+    self:UpdateStatFrameBackgroundTexture()
 end
 
 
@@ -569,7 +699,7 @@ function ShowMyStatsAddon:FillTemplate(statName, percentage, rating)
     if (rating ~= "") then
         rating = string.format("%.0f", rating)
     end
-    return self.db.profile[statName].template:gsub("%{S}", firstToUpper(statName)):gsub("%{P}", percentage):gsub("%{R}", rating)
+    return self.db.profile[statName].template:gsub("%{S}", firstToUpper(statID_to_description[statName])):gsub("%{P}", percentage):gsub("%{R}", rating)
 end
 
 
