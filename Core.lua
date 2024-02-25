@@ -14,6 +14,7 @@ local statID_to_description = {
     haste = "Haste",
     mastery = "Mastery",
     versatilityOutput = "Versatility",
+    versatility = "Versatility",
     versatilityDefense = "Versatility (Def.)",
     lifesteal = "Lifesteal",
     avoidance = "Avoidance",
@@ -449,7 +450,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
 
     local colorPickerBackground = AceGUI:Create("ColorPicker", BackdropTemplateMixin and "BackdropTemplate")
     colorPickerBackground:SetHasAlpha(true)
-    colorPickerBackground:SetLabel("Background colour")
+    colorPickerBackground:SetLabel("Background color")
     --colorPickerBackground:SetWidth(250)
     colorPickerBackground:SetColor(
         self.db.profile.background.color.r,
@@ -574,7 +575,7 @@ function ShowMyStatsAddon:ShowConfigFrame()
         scroll:AddChild(editBox)
 
         local colorPicker = AceGUI:Create("ColorPicker")
-        colorPicker:SetLabel("colour") --firstToUpper(statName) .. " colour")
+        colorPicker:SetLabel("color") --firstToUpper(statName) .. " color")
         colorPicker:SetWidth(100)
         colorPicker:SetColor(
             self.db.profile[statName].color.r,
@@ -896,6 +897,8 @@ function ShowMyStatsAddon:GetStatInfo(statName)
         return self:GetHasteInfo(statName)
     elseif statName == "crit" then
         return self:GetCritInfo(statName)
+    elseif statName == "versatility" then -- for backwards compatibility (old config profiles)
+        return self:GetVersatilityDamageInfo(statName)
     elseif statName == "versatilityOutput" then
         return self:GetVersatilityDamageInfo(statName)
     elseif statName == "versatilityDefense" then
